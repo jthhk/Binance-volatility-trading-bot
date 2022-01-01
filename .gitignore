@@ -20,3 +20,6 @@ _*.txt
 
 # Ignore bash scripts
 *.sh
+creds.yml
+config.yml
+config.yml
