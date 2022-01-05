@@ -72,7 +72,8 @@ Added version 1.28
 JimBot
 - Added new menu option (5) to pause buy manually
 - New prompt on start up asking to use existing files or start new session
-- Add fields to the bot stats
+- back up  files to /logs/Date_Time folders
+- Add fields to the bot stats for BVT_GUI
 - Add Websocket signal support
 - Add menu (6) to Send OCO and Exit
 
