@@ -10,7 +10,9 @@ script_options:
   # Set this to true if you are accessing binance from within the United States of America
   # Need to change TLD
   AMERICAN_USER: False
-
+  
+  # Database to be used by WebSocket/signal files
+  DATABASE: 0
 
 # These options apply to the trading methods the script executes
 trading_options:
@@ -106,6 +108,8 @@ trading_options:
   # Discord integration
   # Used to push alerts, messages etc to a discord channel
   MSG_DISCORD: False
+  
+  REINVEST_PROFITS: False
 
   # This will tell the bot to restart signal modules every hour. This may be useful if for some reason you want to "reset"
   # signal modules.
@@ -126,8 +130,11 @@ trading_options:
     # - os_signalsell_RECOMM
     # - os_signalbuy_3SMAv2
     # - os_pausebot_MAv2
-    # -scoobie_signalbuy_thesnailv3
-      - the_snail_v2 
-    #  - btc_pause
+    # - scoobie_signalbuy_thesnailv3
+    # - the_snail_v2 
+    # - btc_pause
+      - MarketData_WebSoc
+      - jimbot-signal_framework
+
     
   

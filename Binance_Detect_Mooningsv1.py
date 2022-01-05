@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.27
+Version: 1.29
 
 Disclaimer
 
@@ -40,6 +40,8 @@ FUNCTIONALITY
 - Market profit vs Bot profit comparison
 - Restart an external signal every hour
 - Sell a specific coin on stopping bot funciton
+- Bot can reinvest any profits from coins sold so as to compound your profits. Please note, this will also compound any losses so use with care.
+  Configurable in configy.yml with REINVEST_PROFITS flag.
 
 Added version 1.20:
 - Has a "Market Profit". This is a comparison between your bots profits and if you had just bought BTC instead when you started your bot.
@@ -63,6 +65,15 @@ Added version 1.26:
 
 Added version 1.27
 - Menu system on stopping (CTRL+C) the bot for options to: Exit bot, sell all coins, sell specific coin, resume bot
+
+Added version 1.28
+- Reinvest profits, and losses, to compound capital
+
+JimBot
+- Added new menu option to pause buy manually
+- New prompt on start up asking to use existing files or start new session
+- Add fields to the bot stats
+- Add Websocket signal support
 
 DONATIONS
 If you feel you would like to donate to me, for all the above improvements, I would greatly appreciate it. Please see donation options below.
@@ -122,6 +133,9 @@ from itertools import count
 # used to store trades and sell assets
 import json
 
+# copy files to log folder
+import shutil
+
 # used to display holding coins in an ascii table
 from prettytable import PrettyTable
 
@@ -159,6 +173,7 @@ session_profit_incfees_perc = 0
 session_profit_incfees_total = 0
 session_tpsl_override_msg = ""
 is_bot_running = True
+bot_manual_pause = False
 
 global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
 global sell_all_coins, bot_started_datetime, market_startprice, market_currprice, sell_specific_coin
@@ -471,6 +486,8 @@ def balance_report(last_price):
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
+    if REINVEST_PROFITS:
+        print(f'ADJ TRADE TOTAL : {TRADE_TOTAL:.2f} (Current TRADE TOTAL adjusted to reinvest profits)')
     print(f'BUYING MODE     : {font if mode == "Live (REAL MONEY)" else txcolors.DEFAULT}{mode}{txcolors.DEFAULT}{txcolors.ENDC}')
     print(f'Buying Paused   : {bot_paused}')
     print(f'')
@@ -478,33 +495,27 @@ def balance_report(last_price):
     print(f'Realised        : {txcolors.SELL_PROFIT if session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Unrealised      : {txcolors.SELL_PROFIT if unrealised_session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{unrealised_session_profit_incfees_perc:.4f}% Est:${unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
-    #print(f'')
-    #print(f'ALL TIME DATA   :')
-    #print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (BTCUSDT Since STARTED){txcolors.DEFAULT}")
-    #print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
-    #print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
-    #print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
+    print(f'')
+    print(f'ALL TIME DATA   :')
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (BTCUSDT Since STARTED){txcolors.DEFAULT}")
+    print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
+    print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
+    print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
     print(f'External Signals: {extsigs}')
     print(f'--------')
     print(f'')
     #msg1 = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime)
-    #msg1 = str(datetime.now()).split('.')[0] + "\n"
-    #msg2 = " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused) + " | MODE: " + str(discord_mode)
-    #msg2 = msg2 + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
-    #msg2 = msg2 + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
-    #msg2 = msg2 + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
-    #msg2 = msg2 + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
-    #msg2 = msg2 + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
-    
-    msg1 = ""
-    msg2 = "COINS:" + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | MODE: " + str(discord_mode) + "\n"
-    msg2 = msg2 + ' PROFIT%: ' + str(round(session_profit_incfees_perc,2)) + ' PROFIT$: ' + str(round(session_profit_incfees_total,4)) + "\n"
-    msg2 = msg2 + ' WIN: ' + str(trade_wins) + ' LOSS: ' + str(trade_losses) + ' WL%: ' + str(round(WIN_LOSS_PERCENT,2)) + "\n\n"
-
+    msg1 = str(datetime.now()).split('.')[0]
+    msg2 = " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused) + " | MODE: " + str(discord_mode)
+    msg2 = msg2 + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
+    msg2 = msg2 + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
+    msg2 = msg2 + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
+    msg2 = msg2 + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
+    msg2 = msg2 + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
 
     msg_discord_balance(msg1, msg2)
-    history_log(session_profit_incfees_perc, session_profit_incfees_total, unrealised_session_profit_incfees_perc, unrealised_session_profit_incfees_total, session_profit_incfees_perc + unrealised_session_profit_incfees_perc, session_profit_incfees_total+unrealised_session_profit_incfees_total, historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins+trade_losses, trade_wins, trade_losses, WIN_LOSS_PERCENT) 
+    history_log(session_profit_incfees_perc, session_profit_incfees_total, unrealised_session_profit_incfees_perc, unrealised_session_profit_incfees_total, session_profit_incfees_perc + unrealised_session_profit_incfees_perc, session_profit_incfees_total+unrealised_session_profit_incfees_total, historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins+trade_losses, trade_wins, trade_losses, WIN_LOSS_PERCENT)
 
     return msg1 + msg2
 
@@ -525,21 +536,17 @@ def history_log(sess_profit_perc, sess_profit, sess_profit_perc_unreal, sess_pro
             f.write(f'{timestamp}\t{len(coins_bought)}\t{TRADE_SLOTS}\t{str(bot_paused)}\t{str(round(sess_profit_perc,2))}\t{str(round(sess_profit,4))}\t{str(round(sess_profit_perc_unreal,2))}\t{str(round(sess_profit_unreal,4))}\t{str(round(sess_profit_perc_total,2))}\t{str(round(sess_profit_total,4))}\t{str(round(alltime_profit_perc,2))}\t{str(round(alltime_profit,4))}\t{str(total_trades)}\t{str(won_trades)}\t{str(lost_trades)}\t{str(winloss_ratio)}\n')
 
 def msg_discord_balance(msg1, msg2):
-    global last_msg_discord_balance_date, discord_msg_balance_data, last_msg_discord_balance_date
+    global last_msg_discord_balance_date, discord_msg_balance_data
     time_between_insertion = datetime.now() - last_msg_discord_balance_date
-
+    
     # only put the balance message to discord once every 60 seconds and if the balance information has changed since last times
-    # message sending time was increased to 2 minutes for more convenience
-    if time_between_insertion.seconds > 600:
+    if time_between_insertion.seconds > 60:
         if msg2 != discord_msg_balance_data:
             msg_discord(msg1 + msg2)
             discord_msg_balance_data = msg2
         else:
             # ping msg to know the bot is still running
-              msg_discord(".")
-        #the variable is initialized so that sending messages every 2 minutes can work
-        last_msg_discord_balance_date = datetime.now()
-
+            msg_discord(".")
 
 def msg_discord(msg):
 
@@ -555,20 +562,24 @@ def msg_discord(msg):
 
 def pause_bot():
     '''Pause the script when external indicators detect a bearish trend in the market'''
-    global bot_paused, session_profit_incfees_perc, hsp_head, session_profit_incfees_total
+    global bot_paused, session_profit_incfees_perc, hsp_head, session_profit_incfees_total, bot_manual_pause
 
     # start counting for how long the bot has been paused
     start_time = time.perf_counter()
 
-    while os.path.exists("signals/pausebot.pause"):
+    while os.path.exists("signals/pausebot.pause") or bot_manual_pause:
 
         # do NOT accept any external signals to buy while in pausebot mode
         remove_external_signals('buy')
 
         if bot_paused == False:
-            print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
+            if bot_manual_pause:
+                print(f'{txcolors.WARNING}Purchase paused manually, stop loss and take profit will continue to work...')
+                msg = str(datetime.now()) + ' | PAUSEBOT.Purchase paused manually, stop loss and take profit will continue to work...'
+            else:
+                print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
+                msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
             
-            msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
             msg_discord(msg)
 
             bot_paused = True
@@ -654,7 +665,7 @@ def buy():
             print(f"{txcolors.BUY}Preparing to buy {volume[coin]} of {coin} @ ${last_price[coin]['price']}{txcolors.DEFAULT}")
 
             msg1 = str(datetime.now()) + ' | BUY: ' + coin + '. V:' +  str(volume[coin]) + ' P$:' + str(last_price[coin]['price'])
-            #msg_discord(msg1)
+            msg_discord(msg1)
 
             if TEST_MODE:
                 orders[coin] = [{
@@ -717,6 +728,7 @@ def sell_coins(tpsl_override = False, specific_coin_to_sell = ""):
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
     global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total, sell_all_coins, sell_specific_coin
     
+    global TRADE_TOTAL
     externals = sell_external_signals()
     
     last_price = get_price(False) # don't populate rolling window
@@ -842,7 +854,7 @@ def sell_coins(tpsl_override = False, specific_coin_to_sell = ""):
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
             msg1 = str(datetime.now()) + '| SELL: ' + coin + '. R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round(((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100,4))
-            #msg_discord(msg1)
+            msg_discord(msg1)
 
             # try to create a real order          
             try:
@@ -894,6 +906,10 @@ def sell_coins(tpsl_override = False, specific_coin_to_sell = ""):
                 #write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
                 write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChangeIncFees_Perc:.2f}\t{sell_reason}")
                 
+                #reinvest profits
+                if REINVEST_PROFITS:
+                    TRADE_TOTAL += (profit_incfees_total / TRADE_SLOTS)
+
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
                 session_profit_incfees_perc = session_profit_incfees_perc + ((profit_incfees_total/BUDGET) * 100)
@@ -1079,6 +1095,7 @@ def update_portfolio(orders, last_price, volume):
             json.dump(coins_bought, file, indent=4)
 
 def update_bot_stats():
+    
     global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc,session_profit_incfees_perc,session_profit_incfees_total,trade_wins,trade_losses
 
     bot_stats = {
@@ -1117,14 +1134,13 @@ def remove_from_portfolio(coins_sold):
 
 def write_log(logline):
     timestamp = datetime.now().strftime("%y-%m-%d %H:%M:%S")
-    
+
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE,'a+') as f:
             f.write('Datetime\tType\tCoin\tVolume\tBuy Price\tCurrency\tSell Price\tProfit $\tProfit %\tSell Reason\n')    
 
     with open(LOG_FILE,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
-    
 
 def write_signallsell(symbol):
     with open('signalsell_tickers.txt','a+') as f:
@@ -1280,10 +1296,10 @@ def wrap_get_price():
 
 if __name__ == '__main__':
 
-    #req_version = (3,9)
-    #if sys.version_info[:2] < req_version: 
-    #    print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
-    #    sys.exit()
+    req_version = (3,9)
+    if sys.version_info[:2] < req_version: 
+        print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
+        sys.exit()
 
     # Load arguments then parse settings
     args = parse_args()
@@ -1353,6 +1369,9 @@ if __name__ == '__main__':
     # Used to push alerts, messages etc to a discord channel
     MSG_DISCORD = parsed_config['trading_options']['MSG_DISCORD']
     
+    # Whether the bot should reinvest your profits or not.
+    REINVEST_PROFITS = parsed_config['trading_options']['REINVEST_PROFITS']
+
     # Functionality to "reset / restart" external signal modules
     RESTART_EXTSIGNALS = parsed_config['trading_options']['RESTART_EXTSIGNALS']
     EXTSIGNAL_MODULES = parsed_config['trading_options']['EXTSIGNAL_MODULES']
@@ -1403,7 +1422,7 @@ if __name__ == '__main__':
     else:
         file_prefix = 'live_'
 
-    # path to the saved coins_bought file
+     # path to the saved coins_bought file
     coins_bought_file_path = file_prefix + 'coins_bought.json'
 
     # The below mod was stolen and altered from GoGo's fork, a nice addition for keeping a historical history of profit across multiple bot sessions.
@@ -1416,6 +1435,29 @@ if __name__ == '__main__':
 
     bot_started_datetime = datetime.now()
     total_capital_config = TRADE_SLOTS * TRADE_TOTAL
+
+    # Check if files exist and if they do ask what to do 
+    if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
+        print(f'\n{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Use previous session exists, do you want to continue it (y)? Otherwise a new session will be created.')
+        x = input('y/n: ')
+        if x == "n":
+            print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Deleting previous sessions ...')
+            #Create folder under logs , copy past session files
+            NewFolder = "logs/" + datetime.now().strftime('%Y%m%d_%H_%M')
+            os.makedirs(NewFolder)
+            if os.path.exists(bot_stats_file_path):shutil.copy(bot_stats_file_path, NewFolder)
+            if os.path.exists(coins_bought_file_path):shutil.copy(coins_bought_file_path, NewFolder)
+            if os.path.exists(LOG_FILE):shutil.copy(LOG_FILE, NewFolder)
+            if os.path.exists(HISTORY_LOG_FILE):shutil.copy(HISTORY_LOG_FILE, NewFolder)            
+            #remove past session 
+            if os.path.exists(bot_stats_file_path): os.remove(bot_stats_file_path)
+            if os.path.exists(coins_bought_file_path): os.remove(coins_bought_file_path)
+            if os.path.exists(LOG_FILE): os.remove(LOG_FILE)
+            if os.path.exists(HISTORY_LOG_FILE): os.remove(HISTORY_LOG_FILE)
+            print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session deleted, continuing ...')
+        else:
+            print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Continuing with the session started ...')
+
 
     if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
         with open(bot_stats_file_path) as file:
@@ -1444,6 +1486,9 @@ if __name__ == '__main__':
 
             if total_capital != total_capital_config:
                 historic_profit_incfees_perc = (historic_profit_incfees_total / total_capital_config) * 100
+
+    if REINVEST_PROFITS:
+        TRADE_TOTAL = total_capital / TRADE_SLOTS
 
     # rolling window of prices; cyclical queue
     historical_prices = [None] * (TIME_DIFFERENCE * RECHECK_INTERVAL)
@@ -1516,6 +1561,11 @@ if __name__ == '__main__':
                 print_notimestamp(f'\n[2] Sell All Coins')
                 print_notimestamp(f'\n[3] Sell A Specific Coin')
                 print_notimestamp(f'\n[4] Resume Bot')
+                if bot_manual_pause: 
+                    print_notimestamp(f'\n[5] Start Purchases')                
+                else:
+                    print_notimestamp(f'\n[5] Stop Purchases')
+
                 print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
                 menuoption = input()
 
@@ -1577,7 +1627,11 @@ if __name__ == '__main__':
                    print_notimestamp(f'{txcolors.WARNING}\nResuming the bot...\n\n{txcolors.DEFAULT}')
                    start_signal_threads()
                    break
-
+                elif menuoption == "5":
+                    if bot_manual_pause:
+                        bot_manual_pause = False
+                    else:
+                        bot_manual_pause = True
             
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
