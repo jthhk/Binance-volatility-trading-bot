@@ -70,10 +70,11 @@ Added version 1.28
 - Reinvest profits, and losses, to compound capital
 
 JimBot
-- Added new menu option to pause buy manually
+- Added new menu option (5) to pause buy manually
 - New prompt on start up asking to use existing files or start new session
 - Add fields to the bot stats
 - Add Websocket signal support
+- Add menu (6) to Send OCO and Exit
 
 DONATIONS
 If you feel you would like to donate to me, for all the above improvements, I would greatly appreciate it. Please see donation options below.
@@ -135,6 +136,9 @@ import json
 
 # copy files to log folder
 import shutil
+
+# Used to call OCO Script in utilities
+import subprocess
 
 # used to display holding coins in an ascii table
 from prettytable import PrettyTable
@@ -1440,20 +1444,28 @@ if __name__ == '__main__':
     if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
         print(f'\n{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Use previous session exists, do you want to continue it (y)? Otherwise a new session will be created.')
         x = input('y/n: ')
+        NewFolder = "logs/" + datetime.now().strftime('%Y%m%d_%H_%M')
+        os.makedirs(NewFolder)
+        if os.path.exists(bot_stats_file_path):shutil.copy(bot_stats_file_path, NewFolder)
+        if os.path.exists(coins_bought_file_path):shutil.copy(coins_bought_file_path, NewFolder)
+        if os.path.exists(LOG_FILE):shutil.copy(LOG_FILE, NewFolder)
+        if os.path.exists(HISTORY_LOG_FILE):shutil.copy(HISTORY_LOG_FILE, NewFolder)      
+        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
+        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
+        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
+        if os.path.exists(tickers.txt):shutil.copy(tickers.txt, NewFolder)      
+        if os.path.exists(config.yml):shutil.copy(config.yml, NewFolder)     
+        print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session backed up to logs ...')
+ 
         if x == "n":
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Deleting previous sessions ...')
             #Create folder under logs , copy past session files
-            NewFolder = "logs/" + datetime.now().strftime('%Y%m%d_%H_%M')
-            os.makedirs(NewFolder)
-            if os.path.exists(bot_stats_file_path):shutil.copy(bot_stats_file_path, NewFolder)
-            if os.path.exists(coins_bought_file_path):shutil.copy(coins_bought_file_path, NewFolder)
-            if os.path.exists(LOG_FILE):shutil.copy(LOG_FILE, NewFolder)
-            if os.path.exists(HISTORY_LOG_FILE):shutil.copy(HISTORY_LOG_FILE, NewFolder)            
             #remove past session 
             if os.path.exists(bot_stats_file_path): os.remove(bot_stats_file_path)
             if os.path.exists(coins_bought_file_path): os.remove(coins_bought_file_path)
             if os.path.exists(LOG_FILE): os.remove(LOG_FILE)
             if os.path.exists(HISTORY_LOG_FILE): os.remove(HISTORY_LOG_FILE)
+            if os.path.exists(signalsell_tickers.txt): os.remove(signalsell_tickers.txt)
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session deleted, continuing ...')
         else:
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Continuing with the session started ...')
@@ -1565,7 +1577,7 @@ if __name__ == '__main__':
                     print_notimestamp(f'\n[5] Start Purchases')                
                 else:
                     print_notimestamp(f'\n[5] Stop Purchases')
-
+                print_notimestamp(f'\n[6] OCO All Coins')
                 print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
                 menuoption = input()
 
@@ -1632,7 +1644,12 @@ if __name__ == '__main__':
                         bot_manual_pause = False
                     else:
                         bot_manual_pause = True
-            
+                elif menuoption == "6":
+                    print_notimestamp(f'Triggering OCO Script....')
+                    cmd = ['python', 'sell-oco-remaining-coins.py']
+                    subprocess.Popen(cmd).wait()
+                    sys.exit()
+
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
             print(f'')

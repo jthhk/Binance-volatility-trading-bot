@@ -1,21 +1,18 @@
 import sys
-sys.path.append('..')
+#sys.path.append('..')
 
 import json
 import os
+from helpers.parameters import parse_args, load_config
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceOrderException
 from binance.helpers import round_step_size
 from datetime import datetime
 
-# Load helper modules
-from helpers.parameters import (
-    parse_args, load_config
-)
 
 # Load creds modules
 from helpers.handle_creds import (
-    load_correct_creds
+	load_correct_creds, load_discord_creds
 )
 
 from colorama import init
@@ -33,8 +30,8 @@ class txcolors:
 
 args = parse_args()
 
-DEFAULT_CONFIG_FILE = '../config.yml'
-DEFAULT_CREDS_FILE = '../creds.yml'
+DEFAULT_CONFIG_FILE = 'config.yml'
+DEFAULT_CREDS_FILE = 'creds.yml'
 
 config_file = args.config if args.config else DEFAULT_CONFIG_FILE
 creds_file = args.creds if args.creds else DEFAULT_CREDS_FILE
@@ -47,10 +44,10 @@ prefix = 'live_'
 if TEST_MODE:
     prefix = 'test_'
 
-coins_bought_file_path = '../' + prefix + 'coins_bought.json'
+coins_bought_file_path = '' + prefix + 'coins_bought.json'
 LOG_TRADES = parsed_config['script_options'].get('LOG_TRADES')
 LOG_FILE = parsed_config['script_options'].get('LOG_FILE')
-LOG_FILE_PATH = '../' + prefix + LOG_FILE
+LOG_FILE_PATH = '' + prefix + LOG_FILE
 
 # if saved coins_bought json file exists and it's not empty then load it
 coins_bought = {}
@@ -60,10 +57,10 @@ if os.path.isfile(coins_bought_file_path) and os.stat(coins_bought_file_path).st
 
 access_key, secret_key = load_correct_creds(parsed_creds)
 
-if not TEST_MODE:
-    client = Client(access_key, secret_key)
-else:
+if TEST_MODE:
     client = Client(access_key, secret_key,testnet=True)
+else:
+    client = Client(access_key, secret_key)
 
 def write_log(logline):
     timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
