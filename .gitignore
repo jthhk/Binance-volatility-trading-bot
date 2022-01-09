@@ -23,3 +23,6 @@ _*.txt
 creds.yml
 config.yml
 config.yml
+
+logs/* export-ignore
+logs/*/* export-ignore
