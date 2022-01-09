@@ -26,10 +26,19 @@ creds_file = args.creds if args.creds else DEFAULT_CREDS_FILE
 parsed_creds = load_config(creds_file)
 parsed_config = load_config(config_file)
 
+#System settings 
 TEST_MODE = parsed_config['script_options']['TEST_MODE']
-TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
 DEBUG = parsed_config['script_options']['DEBUG']
 DATABASE = parsed_config['script_options']['DATABASE']
+
+#Back Testing Setting 
+MARKET_DATA_INTERVAL = parsed_config['script_options']['MARKET_DATA_INTERVAL']
+BACKTEST_PLAY = parsed_config['script_options']['BACKTEST_PLAY']
+BACKTEST_RECORD = parsed_config['script_options']['BACKTEST_RECORD']
+
+#Trading settings
+TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
+RECHECK_INTERVAL = parsed_config['trading_options']['RECHECK_INTERVAL']
 
 # System Settings
 BVT = False
@@ -50,13 +59,15 @@ else:
 
 #TODO move to config file
 SIGNAL_NAME = 'jimbot_signal'
+signal_interval = RECHECK_INTERVAL
 block_info = False
 
 MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
 
 def DoCycle():
 
-    held_coins_list = {}            
+    held_coins_list = {}        
+    order_coins_list = {}    
     CoinsCounter = 0
     CoinsSkippedCounter = 0 
     CoinsBuyCounter = 0
@@ -100,7 +111,7 @@ def DoCycle():
             DROP_CALCULATION = False
             #-----------------------------------------------------------------
             #Get the latest market data from the dataframes
-            last_price = float(data['LastPx'])
+            last_price = float(data['price'])
             high_price = float(data['high'])
             low_price = float(data['low' ])
             bid_price = float(data['BBPx'])
@@ -108,14 +119,26 @@ def DoCycle():
             close_price = float(data['close'])
             current_bid = float(data['BBPx'])
             current_ask = float(data['BAPx'])
-            potential = float(data['potential'])
+            potential = float(data['potential'])  # (Low/High)*100
+
+            spread = float(data['spread'])  #ask-Bid
+            WeightedAvgPrice = float(data['WeightedAvgPrice'])  # ((Askpx * BuyQty) (Bidpx * AskQty)) / (BuyQty+BuyQty)
+            mid = float(data['mid'])  #Bid-Ask/2
+            orderBookDemand = data['orderBookDemand']  #BidQty > AskQty = Bull else Bear
+
+            TendingDown = float(data['TendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
+            TendingUp = float(data['TendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
+            TakerCount = float(data['TakerCount'])  #cum vol of Taker trades
+            MakerCount = float(data['MakerCount'])  #cum vol of marker trades
+            MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
+            
             #Candle data 
             macd1m = float(data['open'])  
             macd5m = float(100)
             macd15m = float(100)
             macd4h = float(100)
             macd1d = float(100)
-            
+
             #Standard Strategy Calcs 
             #using last Candle lowpx and highpx 
             range = float(high_price - low_price)
@@ -240,11 +263,15 @@ def DoCycle():
     if block_info:
         timetaken = time.time() - StartTime
         print(f'{str(datetime.now())}:Time(sec): {timetaken} |Total Coins Scanned: {CoinsCounter} |Skipped:{CoinsSkippedCounter} |Reviewed:{CoinsCounter - (CoinsSkippedCounter + CoinsBuyCounter)} |Bought:{CoinsBuyCounter}')
+    
+    if CoinsCounter == 0 and BACKTEST_PLAY:
+        print('Signal file exiting as no coins in the MarketData redis database.')
+        sys.exit(0)
 
 def do_work():
     try:
         while True:
             DoCycle()
-            time.sleep(5) 
+            time.sleep(signal_interval) 
     except KeyboardInterrupt:
         sys.exit(0)

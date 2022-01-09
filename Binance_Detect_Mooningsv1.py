@@ -66,7 +66,7 @@ Added version 1.26:
 Added version 1.27
 - Menu system on stopping (CTRL+C) the bot for options to: Exit bot, sell all coins, sell specific coin, resume bot
 
-Added version 1.28
+Added version 1.28pause
 - Reinvest profits, and losses, to compound capital
 
 JimBot
@@ -76,6 +76,10 @@ JimBot
 - Add fields to the bot stats for BVT_GUI
 - Add Websocket signal support
 - Add menu (6) to Send OCO and Exit
+- moved this to WebSockets (requires marketData_WebSoc signal + config WEBSOCKET = True)
+- added support to record and replay marketd data by marketData_WebSoc  (BACKTEST_PLAY: True and/or BACKTEST_RECORD True)
+- added support to replay canned/recorded marketd data from file  (BACKTEST_PLAY: True)
+- Added a number of new data fields to  marketData_WebSoc, for use in jimbot-signal_framework (see jimbot-signal_framework for details)
 
 DONATIONS
 If you feel you would like to donate to me, for all the above improvements, I would greatly appreciate it. Please see donation options below.
@@ -96,7 +100,10 @@ You can find details to donate to him at his website, https://www.cryptomaton.or
 """
 
 # use for environment variables
-import os
+import os 
+
+# Clear the screen
+from os import system, name
 
 # use if needed to pass args to external modules
 import sys
@@ -140,6 +147,9 @@ import shutil
 
 # Used to call OCO Script in utilities
 import subprocess
+
+#redis
+import redis
 
 # used to display holding coins in an ascii table
 from prettytable import PrettyTable
@@ -264,10 +274,19 @@ def get_price(add_to_historical=True):
     global historical_prices, hsp_head, market_startprice, market_currprice
 
     initial_price = {}
-    prices = client.get_all_tickers()
+
+    if WEBSOCKET:
+        #Get data from WebSocket
+        prices = MarketData.sort('L1',alpha=True,desc=False,by='*->potential')
+    else:
+        prices = client.get_all_tickers()
 
     for coin in prices:
         
+        if WEBSOCKET:
+            #Get latest px
+            coin = MarketData.hgetall(coin)
+
         if coin['symbol'] == "BTCUSDT":
             if market_startprice == 0:
                 market_startprice = float(coin['price'])
@@ -306,19 +325,20 @@ def wait_for_price():
 
     pause_bot()
 
+    #JTHBot disbale as using Web Sockets so no need to control
     # get first element from the dictionary
-    firstcoin = next(iter(historical_prices[hsp_head]))  
+    #firstcoin = next(iter(historical_prices[hsp_head]))  
 
     #BBif historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
-    if historical_prices[hsp_head][firstcoin]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
+    #if historical_prices[hsp_head][firstcoin]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
         # sleep for exactly the amount of time required
         #BBtime.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'])).total_seconds())    
-        time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head][firstcoin]['time'])).total_seconds())    
+        #time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head][firstcoin]['time'])).total_seconds())    
 
     # retrieve latest prices
     #last_price = get_price()
     last_price = wrap_get_price()
-
+    
     # calculate the difference in prices
     for coin in historical_prices[hsp_head]:
            
@@ -427,6 +447,15 @@ def sell_external_signals():
 
     return external_list
 
+# define our clear function
+def clear():
+  
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
 
 def balance_report(last_price):
 
@@ -436,6 +465,7 @@ def balance_report(last_price):
 
     BUDGET = TRADE_SLOTS * TRADE_TOTAL
     exposure_calcuated = 0
+    my_table = PrettyTable()
 
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
@@ -451,6 +481,19 @@ def balance_report(last_price):
 
         # unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
         unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
+
+        time_held = timedelta(seconds=datetime.now().timestamp()-int(str(coins_bought[coin]['timestamp'])[:10]))
+        change_perc = (float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at']))/float(coins_bought[coin]['bought_at']) * 100
+        ProfitExFees = float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at'])
+        my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{coin}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['volume']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['bought_at']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(last_price[coin]['price']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['take_profit']):.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['stop_loss']):.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{change_perc:.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{(float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at'])*change_perc)/100:.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{str(time_held).split('.')[0]}{txcolors.DEFAULT}"])
 
     unrealised_session_profit_incfees_perc = (unrealised_session_profit_incfees_total / BUDGET) * 100
 
@@ -487,6 +530,8 @@ def balance_report(last_price):
     if extsigs == "":
         extsigs = "No external signals running"
 
+    if not DEBUG:
+        clear()
     print(f'')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
@@ -494,6 +539,7 @@ def balance_report(last_price):
     if REINVEST_PROFITS:
         print(f'ADJ TRADE TOTAL : {TRADE_TOTAL:.2f} (Current TRADE TOTAL adjusted to reinvest profits)')
     print(f'BUYING MODE     : {font if mode == "Live (REAL MONEY)" else txcolors.DEFAULT}{mode}{txcolors.DEFAULT}{txcolors.ENDC}')
+    print(f'BACKTESTER      : {BACKTEST_PLAY} | WEBSOCKET : {WEBSOCKET}')
     print(f'Buying Paused   : {bot_paused}')
     print(f'')
     print(f'SESSION PROFIT (Inc Fees)')
@@ -510,6 +556,22 @@ def balance_report(last_price):
     print(f'External Signals: {extsigs}')
     print(f'--------')
     print(f'')
+                            
+    if len(my_table._rows) > 0:
+        my_table.field_names = ["Symbol", "Volume", "Bought At", "Now At", "TP %", "SL %", "Change % (ex fees)", "Profit $", "Time Held"]
+        my_table.align["Symbol"] = "l"
+        my_table.align["Volume"] = "r"
+        my_table.align["Bought At"] = "r"
+        my_table.align["Now At"] = "r"
+        my_table.align["TP %"] = "r"
+        my_table.align["SL %"] = "r"
+        my_table.align["Change % (ex fees)"] = "r"
+        my_table.align["Profit $"] = "r"
+        my_table.align["Time Held"] = "l"
+        print_notimestamp(my_table)
+                        
+
+
     #msg1 = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime)
     msg1 = str(datetime.now()).split('.')[0]
     msg2 = " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused) + " | MODE: " + str(discord_mode)
@@ -631,8 +693,13 @@ def convert_volume():
         # max accuracy for BTC for example is 6 decimal points
         # while XRP is only 1
         try:
-            info = client.get_symbol_info(coin)
-            step_size = info['filters'][2]['stepSize']
+            if WEBSOCKET:
+                data = MarketData.hgetall(coin)
+                step_size = data['step_size']
+            else:
+                info = client.get_symbol_info(coin)
+                step_size = info['filters'][2]['stepSize']
+
             lot_size[coin] = step_size.index('1') - 1
             
             if lot_size[coin] < 0:
@@ -1000,8 +1067,13 @@ def extract_order_data(order_details):
 
     # the volume size is sometimes outside of precision, correct it
     try:
-        info = client.get_symbol_info(order_details['symbol'])
-        step_size = info['filters'][2]['stepSize']
+        if WEBSOCKET:
+            data = MarketData.hgetall(coin)
+            step_size = data['step_size']
+        else:
+            info = client.get_symbol_info(order_details['symbol'])
+            step_size = info['filters'][2]['stepSize']
+        
         lot_size = step_size.index('1') - 1
 
         if lot_size <= 0:
@@ -1058,9 +1130,13 @@ def update_portfolio(orders, last_price, volume):
     #     print(orders)
     for coin in orders:
         try:
-            coin_step_size = float(next(
-                        filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(orders[coin][0]['symbol'])['filters'])
-                        )['stepSize'])
+            if WEBSOCKET:
+                data = MarketData.hgetall(orders[coin][0]['symbol'])
+                coin_step_size = data['step_size']
+            else:
+                coin_step_size = float(next(
+                            filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(orders[coin][0]['symbol'])['filters'])
+                            )['stepSize'])
         except Exception as ExStepSize:
             coin_step_size = .1
 
@@ -1211,6 +1287,16 @@ def restart_signal_threads():
     except:
         pass
 
+def check_signal_threads():
+
+    try:
+        for signalthread in signalthreads:
+            if signalthread.is_alive():
+                return False
+        return True
+
+    except:
+        pass
 
 def stop_signal_threads():
 
@@ -1337,6 +1423,13 @@ if __name__ == '__main__':
     DEBUG_SETTING = parsed_config['script_options'].get('DEBUG')
     AMERICAN_USER = parsed_config['script_options'].get('AMERICAN_USER')
 
+    #EnableWeb Sockets
+    WEBSOCKET = parsed_config['script_options'].get('WEBSOCKET')
+    DATABASE = parsed_config['script_options']['DATABASE']
+    
+    #Back Testing Setting 
+    BACKTEST_PLAY = parsed_config['script_options']['BACKTEST_PLAY']
+
     # Load trading vars
     PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
     TRADE_TOTAL = parsed_config['trading_options']['TRADE_TOTAL']
@@ -1410,6 +1503,10 @@ if __name__ == '__main__':
     else:
         client = Client(access_key, secret_key)
 
+
+    if WEBSOCKET:
+        MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
+
     # If the users has a bad / incorrect API key.
     # this will stop the script from starting, and display a helpful error.
     api_ready, msg = test_api_key(client, BinanceAPIException)
@@ -1451,11 +1548,9 @@ if __name__ == '__main__':
         if os.path.exists(coins_bought_file_path):shutil.copy(coins_bought_file_path, NewFolder)
         if os.path.exists(LOG_FILE):shutil.copy(LOG_FILE, NewFolder)
         if os.path.exists(HISTORY_LOG_FILE):shutil.copy(HISTORY_LOG_FILE, NewFolder)      
-        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
-        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
-        if os.path.exists(signalsell_tickers.txt):shutil.copy(signalsell_tickers.txt, NewFolder)      
-        if os.path.exists(tickers.txt):shutil.copy(tickers.txt, NewFolder)      
-        if os.path.exists(config.yml):shutil.copy(config.yml, NewFolder)     
+        if os.path.exists('signalsell_tickers.txt'):shutil.copy('signalsell_tickers.txt', NewFolder)      
+        if os.path.exists('tickers.txt'):shutil.copy('tickers.txt', NewFolder)      
+        if os.path.exists('config.yml'):shutil.copy('config.yml', NewFolder)     
         print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session backed up to logs ...')
  
         if x == "n":
@@ -1466,7 +1561,7 @@ if __name__ == '__main__':
             if os.path.exists(coins_bought_file_path): os.remove(coins_bought_file_path)
             if os.path.exists(LOG_FILE): os.remove(LOG_FILE)
             if os.path.exists(HISTORY_LOG_FILE): os.remove(HISTORY_LOG_FILE)
-            if os.path.exists(signalsell_tickers.txt): os.remove(signalsell_tickers.txt)
+            if os.path.exists('signalsell_tickers.txt'): os.remove('signalsell_tickers.txt')
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session deleted, continuing ...')
         else:
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Continuing with the session started ...')
@@ -1517,12 +1612,6 @@ if __name__ == '__main__':
 
     print(f'{txcolors.WARNING}Press Ctrl-C for more options / to stop the bot{txcolors.DEFAULT}')
 
-    if not TEST_MODE:
-        if not args.notimeout: # if notimeout skip this (fast for dev tests)
-            print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
-            print('WARNING: Waiting 10 seconds before live trading as a security measure!')
-            time.sleep(10)
-
     remove_external_signals('buy')
     remove_external_signals('sell')
     remove_external_signals('pause')
@@ -1531,8 +1620,22 @@ if __name__ == '__main__':
     signalthreads = start_signal_threads()
 
     # seed initial prices
-    #get_price()
+    #get_price()    
     wrap_get_price() 
+
+
+    if not TEST_MODE:
+        if not args.notimeout: # if notimeout skip this (fast for dev tests)
+            print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
+            print('WARNING: Waiting 10 seconds before live trading as a security measure!')
+            time.sleep(10)
+    elif WEBSOCKET:
+        print('WARNING: Web socket is enabled.')
+        print('WARNING: Waiting 10 seconds to collect data before starting BVT..')
+        time.sleep(10) 
+        print('WARNING: BVT starting...')
+
+
     TIMEOUT_COUNT=0
     READ_CONNECTERR_COUNT=0
     BINANCE_API_EXCEPTION=0
@@ -1554,6 +1657,18 @@ if __name__ == '__main__':
             if RESTART_EXTSIGNALS and thehour != datetime.now().hour :
                 restart_signal_threads()
                 thehour = datetime.now().hour
+
+            #Back Tester running - if Child processes no longer running then test is finished
+            #will exit 
+            if BACKTEST_PLAY:
+                if check_signal_threads():
+                    sell_all('End of back tester test')
+                    balance_report(last_price)
+                    print('No signal processes running - end of test')
+                    sys.exit(0)   
+            
+            #sleep for RECHECK_INTERVAL - default 1 sec
+            time.sleep(RECHECK_INTERVAL)
 
         except ReadTimeout as rt:
             TIMEOUT_COUNT += 1
@@ -1606,6 +1721,7 @@ if __name__ == '__main__':
 
                         # get latest prices
                         last_price = wrap_get_price()
+                        #last_price = get_price()
 
                         # display coins to sell
                         #print('\n')

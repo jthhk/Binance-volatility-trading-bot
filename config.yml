@@ -13,7 +13,13 @@ script_options:
   
   # Database to be used by WebSocket/signal files
   DATABASE: 0
+  WEBSOCKET: True
 
+  # Market data Back Tester
+  MARKET_DATA_INTERVAL: 0.5
+  BACKTEST_PLAY: False
+  BACKTEST_RECORD: False
+  
 # These options apply to the trading methods the script executes
 trading_options:
  
@@ -62,7 +68,7 @@ trading_options:
 
   # Number of times to check for TP/SL during each TIME_DIFFERENCE (minimum: 1).
   # Don't spam the Binance API, you will be banned (max 1200 requests per minute per IP).
-  RECHECK_INTERVAL: 6
+  RECHECK_INTERVAL: 1
 
   # the difference in % between the first and second checks for the price.
   CHANGE_IN_PRICE: 0.5

@@ -30,6 +30,7 @@ import logging
 
 # Needed for colorful console output Install with: python3 -m pip install colorama (Mac/Linux) or pip install colorama (PC)
 from colorama import init
+
 init()
 
 # needed for the binance API / websockets / Exception handling
@@ -96,9 +97,15 @@ def InitializeDataFeed():
         #Create Dataframes with coins
         coin = item + PAIR_WITH
         data =  {'symbol': coin}
-        MarketDataRec = {'symbol': coin , 'open': CoinsCounter, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'LastPx' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : -1}
+
+        info = client.get_symbol_info(coin)
+        step_size = info['filters'][2]['stepSize']
+
+        MarketDataRec = {'symbol': coin , 'open': CoinsCounter, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : -1, 'step_size' : step_size, 'TendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',  'TendingDown': 0 , 'TendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
+
         MarketData.hmset("L1:"+coin, MarketDataRec)
         MarketData.lpush("L1", "L1:"+coin)
+
         #get_data_frame(coin)  #Needs to move out
         coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
         current_ticker_list.extend(coinlist)
@@ -120,18 +127,32 @@ def InitializeDataFeed():
 
     #-------------------------------------------------------------------------------
     # (c) Create a Web Socket to get the market data 
-    SOCKET = SOCKET_URL + '/'.join(current_ticker_list)
-    print( str(datetime.now()) + " :Connecting to WebSocket ...")
-    if DEBUG: print( str(datetime.now()) + " :Connecting to WebSocket " + SOCKET + " ...")
-
-    web_socket_app = websocket.WebSocketApp(SOCKET, header=['User-Agent: Python'],
-                                        on_message=on_message,
-                                        on_error=on_error,
-                                        on_close=on_close,
-                                        on_open=on_open)
-    
-    web_socket_app.run_forever()
-    web_socket_app.close()
+    if BACKTEST_PLAY:
+        BackTesterFile = 'backtester/20220108_08_43.txt'
+        num_lines = sum(1 for line in open(BackTesterFile))
+        SleepValue = MARKET_DATA_INTERVAL
+        EstTime = (num_lines * SleepValue)/60
+        print( str(datetime.now()) + " :Back tester enabled, Expected time will be " + str(EstTime) + " mins")
+        with open(BackTesterFile) as topo_file:
+            for line in topo_file:
+                on_message('backtester',line)
+                time.sleep(SleepValue)
+        print( str(datetime.now()) + " :Back tester Replay Complete - Exiting")
+        MarketData.flushall()
+        sys.exit(0)   
+        
+    else:    
+        SOCKET = SOCKET_URL + '/'.join(current_ticker_list)
+        print( str(datetime.now()) + " :Connecting to WebSocket ...")
+        if DEBUG: print( str(datetime.now()) + " :Connecting to WebSocket " + SOCKET + " ...")
+        web_socket_app = websocket.WebSocketApp(SOCKET, header=['User-Agent: Python'],
+                                            on_message=on_message,
+                                            on_error=on_error,
+                                            on_close=on_close,
+                                            on_open=on_open)
+        
+        web_socket_app.run_forever()
+        web_socket_app.close()
     #-------------------------------------------------------------------------------
 
 def is_nan(x):
@@ -200,7 +221,7 @@ def on_message(ws, message):
     #TO DO: PING
     ########################################################
     event = json.loads(message)
-    
+
     try:
         eventtype = event['e'] 
     except:
@@ -222,7 +243,7 @@ def on_message(ws, message):
             if interval == "1m":
                 #1min/called standard
 
-                LastPx = MarketData.hget("L1:" + symbol,'LastPx' )
+                LastPx = MarketData.hget("L1:" + symbol,'price')
                 if is_candle_closed:
                     potential = (float(candle["l"]) / float(candle["h"])) * 100
                 else:
@@ -231,7 +252,7 @@ def on_message(ws, message):
                 if float(LastPx) == -1:
                     LastPx = closePx
                 
-                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'LastPx' : LastPx}
+                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
                 data = MarketData.hgetall("L1:" + symbol)
             else:
@@ -241,17 +262,43 @@ def on_message(ws, message):
 
         elif eventtype == "aggTrade":
             symbol = event["s"]
-            MarketDataRec = {'LastPx' : event["p"], 'LastQty': event["q"] }
+            LastPx = MarketData.hget("L1:" + symbol,'price')
+            TendingDown = float(MarketData.hget("L1:" + symbol,'TendingDown'))
+            TendingUp = float(MarketData.hget("L1:" + symbol,'TendingUp'))
+            MakerCount = float(MarketData.hget("L1:" + symbol,'MakerCount'))
+            TakerCount = float(MarketData.hget("L1:" + symbol,'TakerCount'))
+
+            if event["p"] < LastPx:
+                TendingDown+= 1
+            else:
+                TendingDown = 0
+
+            if event["p"] > LastPx:
+                TendingUp+= 1
+            else:
+                TendingUp = 0
+            
+            #markers and takers 
+            is_market_maker = event["m"]
+            if is_market_maker:
+                TakerCount=+ float(event["q"])
+            else: 
+                MakerCount=+ float(event["q"])
+
+            if TakerCount>MakerCount:
+                MarketPressure = "Bull"
+            else:
+                MarketPressure = "Bear"
+
+            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TendingDown': TendingDown, 'TendingUp': TendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             data = MarketData.hgetall("L1:" + symbol)
-            #is_market_maker = event['x']
-            #side = "B" 
-            #if is_market_maker:
-            #    side = "S" 
+
+
         elif eventtype == "BookTicker":
             symbol = event["s"]
             ClosePx = MarketData.hget("L1:" + symbol,'close' )
-            LastPx = MarketData.hget("L1:" + symbol,'LastPx' )
+            LastPx = MarketData.hget("L1:" + symbol,'price' )
 
             #fall back as aggTrade or close may not be in yet
             if float(ClosePx) == -1:
@@ -260,7 +307,20 @@ def on_message(ws, message):
             if float(LastPx) == -1:
                 LastPx = event["a"]
 
-            MarketDataRec = {'BBPx' : event["b"], 'BBQty': event["B"],'BAPx' : event["a"], 'BAQty': event["A"],'LastPx': LastPx,'close': ClosePx }
+            #Experiment 
+            askpx = float(event["a"])
+            bidpx = float(event["b"])
+            askqty =float(event["A"])
+            bidqty =float(event["B"])
+            spread =  askpx- bidpx 
+            WeightedAvgPrice = (askpx * bidqty + bidpx  * askqty) / (askqty + bidqty)
+            mid = (bidpx - askpx) / 2
+            if bidqty > askqty:
+                orderBookdemand = "Bull"
+            else:
+                orderBookdemand = "Bear"
+
+            MarketDataRec = {'BBPx' : event["b"], 'BBQty': event["B"],'BAPx' : event["a"], 'BAQty': event["A"],'price': LastPx,'close': ClosePx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             data = MarketData.hgetall("L1:" + symbol)
         elif eventtype == "Ping":
@@ -275,6 +335,13 @@ def on_message(ws, message):
         if DEBUG:
             print(data)
             print("------" + eventtype + "------")
+
+        #Write events to log file to allow backtesting 
+        if BACKTEST_RECORD:
+            file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H_%M') + '.txt'
+            with open(file_path, "a") as output_file:
+                output_file.write(message + '\n')
+           
     except KeyboardInterrupt as ki:
         sys.exit(0)    
 
@@ -298,6 +365,11 @@ DEBUG_SETTING = parsed_config['script_options'].get('DEBUG')
 AMERICAN_USER = parsed_config['script_options'].get('AMERICAN_USER')
 DATABASE = parsed_config['script_options']['DATABASE']
 
+#Back Testing Setting 
+MARKET_DATA_INTERVAL = parsed_config['script_options']['MARKET_DATA_INTERVAL']
+BACKTEST_PLAY = parsed_config['script_options']['BACKTEST_PLAY']
+BACKTEST_RECORD = parsed_config['script_options']['BACKTEST_RECORD']
+
 # Load trading vars
 PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
 FIATS = parsed_config['trading_options']['FIATS']
@@ -306,6 +378,15 @@ CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
 CUSTOM_LIST_AUTORELOAD = parsed_config['trading_options']['CUSTOM_LIST_AUTORELOAD']
 TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
 
+# Load creds for correct environment
+access_key, secret_key = load_correct_creds(parsed_creds)
+
+# Authenticate with the client, Ensure API key is good before continuing
+if AMERICAN_USER:
+    client = Client(access_key, secret_key, tld='us')
+else:
+    client = Client(access_key, secret_key)
+    
 #define redis DataBase connection and flush it
 MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
 MarketData.flushall()
