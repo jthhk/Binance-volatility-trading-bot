@@ -7,6 +7,24 @@ THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
 * Binance_Detect_Mooningsv1.py = My first attempt of intro to web sockets  + redis <- Live
 * Binance_Detect_Mooningsv2.py = Complete rewrite for web sockets + redis + dataframes for buy and sell coins <- Not tested
 
+i have removed all the files under root into folders - just trying to reduce noise 
+
+## Jim Bot 
+
+- Added new menu option (5) to pause buy manualy
+- New prompt on start up asking to use existing files or start new session
+- back up  files to /logs/Date_Time folders
+- Add fields to the bot stats for BVT_GUI
+- Add Websocket signal support
+- Add menu (6) to Send OCO and Exit
+- moved this to WebSockets (requires marketData_WebSoc signal + config WEBSOCKET = True)
+- added support to record and replay marketd data by marketData_WebSoc  (BACKTEST_PLAY: True and/or BACKTEST_RECORD True)
+- added support to replay canned/recorded marketd data from file  (BACKTEST_PLAY: True)
+- Added a number of new data fields to  marketData_WebSoc, for use in jimbot-signal_framework (see jimbot-signal_framework for details)
+- Adjusted the Trailing stop lose/profit logic 
+- moved from lists to dataframes - addeding coings_sold
+- rewrote the bot to reduce looping
+- moved config reading to generic settings.XXXXXX
 
 # Binance Volitility Trading Bot
 
