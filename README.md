@@ -1,5 +1,11 @@
 # Binance Volitility Trading Bot
 
+THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
+
+
+
+# Binance Volitility Trading Bot
+
 ## Description
 This Binance trading bot analyses the changes in price across all coins on Binance and place trades on the most volatile ones. 
 In addition to that, this Binance trading algorithm will also keep track of all the coins bought and sell them according to your specified Stop Loss and Take Profit.
