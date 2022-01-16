@@ -1,4 +1,4 @@
-# Binance Volitility Trading Bot
+# JTHHK / JimBot fork
 
 THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
 
