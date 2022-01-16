@@ -28,4 +28,5 @@ pandas-ta==0.3.14b0
 ccxt==1.58.23
 asyncio==3.4.3
 redis
+matplotlib
 

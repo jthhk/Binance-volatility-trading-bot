@@ -74,7 +74,7 @@ trading_options:
   CHANGE_IN_PRICE: 0.5
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: 2.2
+  STOP_LOSS: -2.2
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: 1.9
@@ -91,8 +91,8 @@ trading_options:
   # when hit TAKE_PROFIT, move TAKE_PROFIT up by TRAILING_TAKE_PROFIT percentage points
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
-  TRAILING_STOP_LOSS: 0.4
-  TRAILING_TAKE_PROFIT: .01
+  TRAILING_STOP_LOSS: -0.4
+  TRAILING_TAKE_PROFIT: 0.6
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
   # when hit SESSION_TAKE_PROFIT %, sell all coins and stop bot

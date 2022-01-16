@@ -101,7 +101,7 @@ def InitializeDataFeed():
         info = client.get_symbol_info(coin)
         step_size = info['filters'][2]['stepSize']
 
-        MarketDataRec = {'symbol': coin , 'open': CoinsCounter, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : -1, 'step_size' : step_size, 'TendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',  'TendingDown': 0 , 'TendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
+        MarketDataRec = {'symbol': coin , 'open': CoinsCounter, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',  'TendingDown': 0 , 'TendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
 
         MarketData.hmset("L1:"+coin, MarketDataRec)
         MarketData.lpush("L1", "L1:"+coin)
@@ -252,7 +252,7 @@ def on_message(ws, message):
                 if float(LastPx) == -1:
                     LastPx = closePx
                 
-                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx}
+                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
                 data = MarketData.hgetall("L1:" + symbol)
             else:
@@ -268,6 +268,9 @@ def on_message(ws, message):
             MakerCount = float(MarketData.hget("L1:" + symbol,'MakerCount'))
             TakerCount = float(MarketData.hget("L1:" + symbol,'TakerCount'))
 
+            if float(LastPx) == -1:
+                LastPx = event["p"]
+
             if event["p"] < LastPx:
                 TendingDown+= 1
             else:
@@ -277,7 +280,7 @@ def on_message(ws, message):
                 TendingUp+= 1
             else:
                 TendingUp = 0
-            
+
             #markers and takers 
             is_market_maker = event["m"]
             if is_market_maker:
@@ -290,7 +293,7 @@ def on_message(ws, message):
             else:
                 MarketPressure = "Bear"
 
-            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TendingDown': TendingDown, 'TendingUp': TendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure }
+            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TendingDown': TendingDown, 'TendingUp': TendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             data = MarketData.hgetall("L1:" + symbol)
 
@@ -320,7 +323,7 @@ def on_message(ws, message):
             else:
                 orderBookdemand = "Bear"
 
-            MarketDataRec = {'BBPx' : event["b"], 'BBQty': event["B"],'BAPx' : event["a"], 'BAQty': event["A"],'price': LastPx,'close': ClosePx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand }
+            MarketDataRec = {'BBPx' : event["b"], 'BBQty': event["B"],'BAPx' : event["a"], 'BAQty': event["A"],'price': LastPx,'close': ClosePx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand, 'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             data = MarketData.hgetall("L1:" + symbol)
         elif eventtype == "Ping":
