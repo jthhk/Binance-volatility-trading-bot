@@ -133,7 +133,8 @@ def DoCycle():
                     else:
                         current_drop = 0
 
-                    atr = []               # average true range
+                    # average true range
+                    atr = []               
                     atr.append(high_price-low_price)
                     atr_percentage = ((sum(atr)/len(atr)) / close_price) * 100
                     #-----------------------------------------------------------------

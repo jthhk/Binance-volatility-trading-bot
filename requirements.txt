@@ -29,4 +29,6 @@ ccxt==1.58.23
 asyncio==3.4.3
 redis
 matplotlib
-
+altair
+streamlit
+matplotlib

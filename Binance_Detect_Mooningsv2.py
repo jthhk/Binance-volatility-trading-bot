@@ -791,12 +791,14 @@ if __name__ == '__main__':
     #Reset or load last session
 
     CheckForExistingSession()
+    #Get Bought File
     if os.path.isfile(settings.coins_bought_file_path) and os.stat(settings.coins_bought_file_path).st_size!= 0:
         coins_bought = pd.read_json(settings.coins_bought_file_path, orient ='split', compression = 'infer')
         coins_bought.head()
     else:
         coins_bought = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss', 'Lastpx','Profit'])
-
+    
+    #Get Sold File
     if os.path.isfile(settings.coins_sold_file_path) and os.stat(settings.coins_sold_file_path).st_size!= 0:
         coins_sold = pd.read_json(settings.coins_sold_file_path, orient ='split', compression = 'infer')
         coins_sold.head()
@@ -805,6 +807,7 @@ if __name__ == '__main__':
 
     print(f'{txcolors.WARNING}Press Ctrl-C for more options / to stop the bot{txcolors.DEFAULT}')
     
+    #Clear alerting
     remove_external_signals('buy')
     remove_external_signals('sell')
     remove_external_signals('pause')
@@ -825,9 +828,11 @@ if __name__ == '__main__':
     while is_bot_running:
         try:
             if  not (os.path.exists("signals/pausebot.pause") or bot_manual_pause):
-                #only if Bot is not paused 		
+            #only if Bot is NOT paused 		
+
                 #if settings.REINVEST_PROFITS:
                 #    settings.TRADE_TOTAL = total_capital / settings.TRADE_SLOTS
+
                 bot_paused = False
                 externals = buy_external_signals()
                 for excoin in externals:
@@ -839,6 +844,7 @@ if __name__ == '__main__':
                 for excoin in externals:
                     sell(excoin, 'Sell Signal') 
             else:
+            #Bot is paused 
                 remove_external_signals('buy')
                 if bot_manual_pause:
                     print(f'{txcolors.WARNING}Purchase paused manually, stop loss and take profit will continue to work...')
@@ -849,7 +855,7 @@ if __name__ == '__main__':
                 bot_paused = True
                 msg_discord(msg)
 
-            #Check every cycle
+            #Check every cycle/reset values 
             exposure_calcuated = 0  
             unrealised_session_profit_incfees_total = 0 
             unrealised_session_profit_incfees_perc = 0
@@ -925,7 +931,7 @@ if __name__ == '__main__':
                             print(f'{sell_reason}')
                             break
 
-            #Publish updates
+            #Publish updates to files and screen
             update_portfolio()
             balance_report()
             update_bot_stats()
