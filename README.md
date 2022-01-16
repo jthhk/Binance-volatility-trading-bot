@@ -4,7 +4,7 @@ THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
 
 * Binance Detect Moonings.py = Orginal fork  <- Live
 * Binance_Detect_Moonings.py = Fork version from Ak_Scalp - can't find reference   <- Live
-* Binance_Detect_Mooningsv1.py = My firdst attempt of intro to web sockets  + redis <- Live
+* Binance_Detect_Mooningsv1.py = My first attempt of intro to web sockets  + redis <- Live
 * Binance_Detect_Mooningsv2.py = Complete rewrite for web sockets + redis + dataframes for buy and sell coins <- Not tested
 
 
