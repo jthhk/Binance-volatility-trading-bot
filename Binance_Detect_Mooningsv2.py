@@ -392,11 +392,12 @@ def balance_report(EndOfAlgo=False):
     if len(coins_bought.index) > 0:
         print(f'---Holding----')
         print_notimestamp(coins_bought.to_markdown())
-
+        print(f'')
     if EndOfAlgo:
         if len(coins_sold.index) > 0:
             print(f'---Sold----')
             print_notimestamp(coins_sold.to_markdown())
+            print(f'')
     else:
         #write out every time
         if not os.path.exists(settings.HISTORY_LOG_FILE):
