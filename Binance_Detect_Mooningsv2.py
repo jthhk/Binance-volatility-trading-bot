@@ -351,7 +351,8 @@ def balance_report(EndOfAlgo=False):
     if (trade_wins > 0) and (trade_losses == 0):
         WIN_LOSS_PERCENT = 100
 
-    market_currprice =  GetPrice(settings.REF_COIN)   
+    #market_currprice =  GetPrice(settings.REF_COIN)   
+    market_currprice = 43000
     market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
     mode = "Live (REAL MONEY)"
