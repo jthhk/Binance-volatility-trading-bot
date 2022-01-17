@@ -1,4 +1,5 @@
 # use for environment variables
+from logging import exception
 import os 
 
 # Clear the screen
@@ -235,8 +236,6 @@ def start_signal_thread(module):
 ##########################################################
 #Signal mgt
 #########################################################
-
-
 def remove_external_signals(fileext):
     signals = glob.glob(f'signals/*.{fileext}')
     for filename in signals:
@@ -283,20 +282,6 @@ def sell_external_signals():
 ##########################################################
 #discord
 #########################################################
-def msg_discord_balance(msg1, msg2):
-    global last_msg_discord_balance_date, discord_msg_balance_data
-    time_between_insertion = datetime.now() - last_msg_discord_balance_date
-    
-    # only put the balance message to discord once every 60 seconds and if the balance information has changed since last times
-    if time_between_insertion.seconds > 60:
-        if msg2 != discord_msg_balance_data:
-            msg_discord(msg1 + msg2)
-            discord_msg_balance_data = msg2
-        else:
-            # ping msg to know the bot is still running
-            msg_discord(".")
-        last_msg_discord_balance_date = datetime.now()
-
 def msg_discord(msg):
     message = msg + '\n\n'
     if settings.MSG_DISCORD:
@@ -310,10 +295,9 @@ def msg_discord(msg):
 #########################################################
 def update_bot_stats():
     
-    global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total
+    global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause
-
+    global  session_profit_incfees_perc,session_profit_incfees_total
 
     bot_stats = {
         'total_capital' : str(settings.TRADE_SLOTS * settings.TRADE_TOTAL),
@@ -355,9 +339,9 @@ def write_log(logline):
 
 def balance_report(EndOfAlgo=False):
 
-    global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total,exposure_calcuated
+    global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total,exposure_calcuated
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,bot_paused
+    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused
 
     #Bot Summary 
     # truncating some of the above values to the correct decimal places before printing
@@ -366,9 +350,8 @@ def balance_report(EndOfAlgo=False):
         WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses)) * 100, 2)
     if (trade_wins > 0) and (trade_losses == 0):
         WIN_LOSS_PERCENT = 100
-    
-    market_currprice = 1
-    market_startprice = 2
+
+    market_currprice =  GetPrice(settings.REF_COIN)   
     market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
     mode = "Live (REAL MONEY)"
@@ -377,26 +360,14 @@ def balance_report(EndOfAlgo=False):
         mode = "Test (no real money used)"
         discord_mode = "Test"
 
-
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
-    extsigs = ""
-    try:
-        for module in settings.SIGNALLING_MODULES:
-            if extsigs == "":
-                extsigs = module
-            else:
-                extsigs = extsigs + ', ' + module
-    except Exception as e:
-        pass
-    if extsigs == "":
-        extsigs = "No external signals running"
     clear()
     print(f'')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
     if settings.REINVEST_PROFITS:
-        print(f'ADJ TRADE TOTAL : {TRADE_TOTAL:.2f} (Current TRADE TOTAL adjusted to reinvest profits)')
+        print(f'ADJ TRADE TOTAL : {settings.TRADE_TOTAL:.2f} (Current TRADE TOTAL adjusted to reinvest profits)')
     print(f'BUYING MODE     : {font if mode == "Live (REAL MONEY)" else txcolors.DEFAULT}{mode}{txcolors.DEFAULT}{txcolors.ENDC}')
     print(f'BACKTESTER      : {settings.BACKTEST_PLAY}')
     print(f'Buying Paused   : {bot_paused}')
@@ -412,23 +383,19 @@ def balance_report(EndOfAlgo=False):
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
-    print(f'External Signals: {extsigs}')
+    #print(f'External Signals: {extsigs}')
+    print(f'External Signals: {settings.SIGNALLING_MODULES}')
     print(f'--------')
   
     #Bought Coins Table 
     if len(coins_bought.index) > 0:
-        print(f'')
-        print_notimestamp(f'\n---Holding----')
-        print(f'')
+        print(f'---Holding----')
         print_notimestamp(coins_bought.to_markdown())
-        print_notimestamp(f'\n')
 
     if EndOfAlgo:
         if len(coins_sold.index) > 0:
-            print_notimestamp(f'\n---Sold----\n')
+            print(f'---Sold----')
             print_notimestamp(coins_sold.to_markdown())
-            print_notimestamp(f'\n')
-
     else:
         #write out every time
         if not os.path.exists(settings.HISTORY_LOG_FILE):
@@ -458,11 +425,13 @@ def CheckForExistingSession():
         if os.path.exists('config.yml'):shutil.copy('config.yml', NewFolder)     
         print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session backed up to logs ...')
 
+        #Create folder under logs , copy past session files
         print(f'\n{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Use previous session exists, do you want to continue it (y)? Otherwise a new session will be created.')
         x = input('y/n: ')
-        #Create folder under logs , copy past session files
-        #remove past session 
         if x == "n":
+            #remove past session 
+        #remove past session 
+            #remove past session 
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Deleting previous sessions ...')
             if os.path.exists(settings.bot_stats_file_path): os.remove(settings.bot_stats_file_path)
             if os.path.exists(settings.coins_bought_file_path): os.remove(settings.coins_bought_file_path)
@@ -475,8 +444,8 @@ def CheckForExistingSession():
        
     if os.path.isfile(settings.bot_stats_file_path) and os.stat(settings.bot_stats_file_path).st_size!= 0:
         with open(settings.bot_stats_file_path) as file:
-            bot_stats = json.load(file)
             # load bot stats:
+            bot_stats = json.load(file)
             bot_started_datetime = datetime.strptime(bot_stats['botstart_datetime'], '%Y-%m-%d %H:%M:%S.%f')
             total_capital = bot_stats['total_capital']
             historic_profit_incfees_perc =  bot_stats['session_profit_incfees_perc']
@@ -501,7 +470,7 @@ def sell(symbol,reason):
         Sell_Coins_Details = coins_bought[coins_bought['symbol'] == symbol]
     
     for index, row in Sell_Coins_Details.iterrows():
-        FILLS_TOTAL = FILLS_QTY = FILLS_FEE = BNB_WARNING = 0
+        FILLS_TOTAL = FILLS_QTY = FILLS_FEE  = 0
         coin = row['symbol']
         if settings.TEST_MODE:
             data = MarketData.hgetall("L1:"+coin)
@@ -619,7 +588,7 @@ def buy(symbol):
             try:
                 order_details = client.create_order(
                     symbol = symbol,
-                    side = 'BUY11',
+                    side = 'BUY',
                     type = 'MARKET',
                     quantity = volume
                 )
@@ -628,7 +597,7 @@ def buy(symbol):
             except Exception as e:
                 print(f'buy() exception: {e}')
 
-            FILLS_TOTAL = FILLS_QTY = FILLS_FEE = BNB_WARNING = 0
+            FILLS_TOTAL = FILLS_QTY = FILLS_FEE = 0
             # loop through each 'fill':
             for fills in order_details['fills']:
                 FILL_PRICE = float(fills['price'])
@@ -642,7 +611,6 @@ def buy(symbol):
                 FILLS_TOTAL += (FILL_PRICE * FILL_QTY)
                 # add to running total of fills quantity
                 FILLS_QTY += FILL_QTY
-                # increase fills array index by 1
 
             # calculate average fill price:
             FILL_AVG = (FILLS_TOTAL / FILLS_QTY)
@@ -698,50 +666,16 @@ def menu():
             LOOP = False            
         elif menuoption == "3":
             while not menuoption.upper() == "N":
-                # setup table
-                my_table = PrettyTable()
-                my_table.field_names = ["Symbol", "Volume", "Bought At", "Now At", "TP %", "SL %", "Change % (ex fees)", "Profit $", "Time Held"]
-                my_table.align["Symbol"] = "l"
-                my_table.align["Volume"] = "r"
-                my_table.align["Bought At"] = "r"
-                my_table.align["Now At"] = "r"
-                my_table.align["TP %"] = "r"
-                my_table.align["SL %"] = "r"
-                my_table.align["Change % (ex fees)"] = "r"
-                my_table.align["Profit $"] = "r"
-                my_table.align["Time Held"] = "l"
-
-                # display coins to sell
-                for index, coin in coins_bought.iterrows():
-                    symbol = coin['symbol']
-                    data = MarketData.hgetall("L1:"+symbol)
-                    last_price = float(data['price'])
-                    time_held = timedelta(seconds=datetime.now().timestamp()-int(str(1642264983072)[:10]))
-                    #timedelta(seconds=datetime.now().timestamp()-int(str(coin['timestamp'][:10])))
-                    change_perc = (float(last_price) - float(coin['avgPrice']))/float(coin['avgPrice']) * 100
-                    ProfitExFees = float(last_price) - float(coin['avgPrice'])
-                    my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{symbol}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coin['volume']):.6f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coin['avgPrice']):.6f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(last_price):.6f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coin['take_profit']):.4f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coin['stop_loss']):.4f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{change_perc:.4f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{(float(coin['volume'])*float(coin['avgPrice'])*change_perc)/100:.6f}{txcolors.DEFAULT}",
-                                    f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{str(time_held).split('.')[0]}{txcolors.DEFAULT}"])
-                    
-                my_table.sortby = 'Change % (ex fees)'
-                if len(my_table._rows) > 0:
-                    print_notimestamp(my_table)
+                if len(coins_sold.index) > 0:
+                    # ask for coin to sell
+                    print_notimestamp(coins_sold.to_markdown())
+                    print_notimestamp(f'{txcolors.WARNING}\nType in the Symbol you wish to sell, including pair (i.e. BTCUSDT) or type N to return to Menu (N)?{txcolors.DEFAULT}')
+                    menuoption = input()
+                    if menuoption == "":
+                        break
+                    sell(menuoption.upper(),'Sell single Coin menu option chosen!')
                 else:
                     break
-
-                # ask for coin to sell
-                print_notimestamp(f'{txcolors.WARNING}\nType in the Symbol you wish to sell, including pair (i.e. BTCUSDT) or type N to return to Menu (N)?{txcolors.DEFAULT}')
-                menuoption = input()
-                if menuoption == "":
-                    break
-                sell(menuoption.upper(),'Sell single Coin menu option chosen!')
         elif menuoption == "4":
             print_notimestamp(f'{txcolors.WARNING}\nResuming the bot...\n\n{txcolors.DEFAULT}')
             start_signal_threads()
@@ -774,6 +708,7 @@ if __name__ == '__main__':
     trade_wins=trade_losses=market_startprice=unrealised_session_profit_incfees_total=unrealised_session_profit_incfees_perc = 0
     session_profit_incfees_perc=session_profit_incfees_total = exposure_calcuated = 0
 
+    #loads config.cfg into settings.XXXXX
     settings.init()
     
    # Binance - Authenticate with the client, Ensure API key is good before continuing
@@ -790,8 +725,8 @@ if __name__ == '__main__':
             exit(f'{txcolors.SELL_LOSS}{msg}{txcolors.DEFAULT}')
 
     #Reset or load last session
-
     CheckForExistingSession()
+
     #Get Bought File
     if os.path.isfile(settings.coins_bought_file_path) and os.stat(settings.coins_bought_file_path).st_size!= 0:
         coins_bought = pd.read_json(settings.coins_bought_file_path, orient ='split', compression = 'infer')
@@ -816,26 +751,30 @@ if __name__ == '__main__':
     # load signalling modules
     mymodule = {}
     signalthreads = start_signal_threads()   
-    is_bot_running = True 
     
     if not settings.TEST_MODE:
         print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
         print('WARNING: Waiting 10 seconds before live trading as a security measure!')
         time.sleep(10)
+
+    #bot settings
     bot_started_datetime = datetime.now()
-    bot_manual_pause = False
     MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
+    bot_manual_pause = False
+    is_bot_running = True
+    #market_startprice =  GetPrice(settings.REF_COIN)   
+    market_startprice = 43000
 
     while is_bot_running:
         try:
-
             CoinsUpdates = False
+
             if  not (os.path.exists("signals/pausebot.pause") or bot_manual_pause):
             #only if Bot is NOT paused 		
-
                 #if settings.REINVEST_PROFITS:
                 #    settings.TRADE_TOTAL = total_capital / settings.TRADE_SLOTS
                 bot_paused = False
+
                 externals = buy_external_signals()
                 for excoin in externals:
                     CoinAlreadyBought = coins_bought[coins_bought['symbol'].str.contains(excoin)]
@@ -863,9 +802,11 @@ if __name__ == '__main__':
             exposure_calcuated = 0  
             unrealised_session_profit_incfees_total = 0 
             unrealised_session_profit_incfees_perc = 0
+
             for index, row in coins_bought.iterrows():
                 symbol = row['symbol']
                 data = MarketData.hgetall("L1:"+symbol)
+                #Check i have a price, it may take a few seconds at the start 
                 if len(data) > 1 and bool(data['updated']) and float(data['price']) > 0:
                     SellPrice =  float(data['price'])
                     sellFee = (SellPrice * (settings.TRADING_FEE/100))
@@ -886,7 +827,7 @@ if __name__ == '__main__':
   
                     #TP and SL Adjustment to lock in profits
                     if SellPriceWithFees >= TP and settings.USE_TRAILING_STOP_LOSS: 
-                            row['stop_loss'] =  row['stop_loss'] + settings.TRAILING_STOP_LOSS 
+                            row['stop_loss'] =  row['take_profit'] + settings.TRAILING_STOP_LOSS 
                             row['take_profit'] =   row['take_profit'] + settings.TRAILING_TAKE_PROFIT 
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
@@ -945,14 +886,11 @@ if __name__ == '__main__':
             time.sleep(settings.RECHECK_INTERVAL) 
 
         except ReadTimeout as rt:
-            TIMEOUT_COUNT += 1
-            print(f'We got a timeout error from Binance. Re-loop. Connection Timeouts so far: {TIMEOUT_COUNT}')
+            print(f'We got a timeout error from Binance. Re-loop.')
         except ConnectionError as ce:
-            READ_CONNECTERR_COUNT += 1
-            print(f'We got a connection error from Binance. Re-loop. Connection Errors so far: {READ_CONNECTERR_COUNT}')
+            print(f'We got a connection error from Binance. Re-loop.')
         except BinanceAPIException as bapie:
-            BINANCE_API_EXCEPTION += 1
-            print(f'We got an API error from Binance. Re-loop. API Errors so far: {BINANCE_API_EXCEPTION}.\nException:\n{bapie}')
+            print(f'We got an API error from Binance. Re-loop. \nException:\n{bapie}')
         except KeyboardInterrupt as ki:
             stop_signal_threads()
             if menu() == True: sys.exit(0)
