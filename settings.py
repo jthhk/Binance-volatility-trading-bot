@@ -26,7 +26,7 @@ def init():
     global SIGNALLING_MODULES,TEST_MODE,REINVEST_PROFITS,TRADE_TOTAL,TRADE_SLOTS,SESSION_STOP_LOSS,TRADING_FEE,SELL_ON_SIGNAL_ONLY
     global USE_TRAILING_STOP_LOSS,SESSION_TPSL_OVERRIDE, DEBUG, MSG_DISCORD,DISCORD_WEBHOOK,PAIR_WITH,EXTSIGNAL_MODULES,coins_sold_file_path
     global TRAILING_TAKE_PROFIT,TRAILING_STOP_LOSS,total_capital_config,SESSION_TAKE_PROFIT,BACKTEST_PLAY,MOVEMENT,RECHECK_INTERVAL
-    global TAKE_PROFIT, STOP_LOSS,CHANGE_IN_PRICE
+    global TAKE_PROFIT, STOP_LOSS,CHANGE_IN_PRICE,REF_COIN
 
     DEFAULT_CONFIG_FILE = 'config.yml'
     DEFAULT_CREDS_FILE = 'creds.yml'
@@ -61,6 +61,8 @@ def init():
     TRADE_TOTAL = parsed_config['trading_options']['TRADE_TOTAL']
     TRADE_SLOTS = parsed_config['trading_options']['TRADE_SLOTS']
     FIATS = parsed_config['trading_options']['FIATS']
+    REF_COIN = parsed_config['trading_options']['REF_COIN']
+    
 
     TIME_DIFFERENCE = parsed_config['trading_options']['TIME_DIFFERENCE']
     RECHECK_INTERVAL = parsed_config['trading_options']['RECHECK_INTERVAL']

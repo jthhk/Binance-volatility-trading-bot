@@ -36,7 +36,9 @@ trading_options:
   # Recommended: no less than 12 USDT. Suggested: 15 or more.
   TRADE_TOTAL: 20
 
-  
+  # Reference coin for display
+  REF_COIN: 'BTCUSDT'
+
   # List of trading pairs to exclude
   # by default we're excluding the most popular fiat pairs
   FIATS:
