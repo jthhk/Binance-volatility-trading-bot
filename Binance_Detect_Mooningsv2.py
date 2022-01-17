@@ -417,8 +417,9 @@ def balance_report(EndOfAlgo=False):
   
     #Bought Coins Table 
     if len(coins_bought.index) > 0:
-        print_notimestamp(f'\n')
-        print_notimestamp(f'\n---Holding----\n')
+        print(f'')
+        print_notimestamp(f'\n---Holding----')
+        print(f'')
         print_notimestamp(coins_bought.to_markdown())
         print_notimestamp(f'\n')
 
@@ -827,22 +828,25 @@ if __name__ == '__main__':
 
     while is_bot_running:
         try:
+
+            CoinsUpdates = False
             if  not (os.path.exists("signals/pausebot.pause") or bot_manual_pause):
             #only if Bot is NOT paused 		
 
                 #if settings.REINVEST_PROFITS:
                 #    settings.TRADE_TOTAL = total_capital / settings.TRADE_SLOTS
-
                 bot_paused = False
                 externals = buy_external_signals()
                 for excoin in externals:
                     CoinAlreadyBought = coins_bought[coins_bought['symbol'].str.contains(excoin)]
                     if len(CoinAlreadyBought.index) == 0 and (len(coins_bought.index) + 1) <= settings.TRADE_SLOTS:
-                        buy(excoin) 
+                        buy(excoin)
+                        CoinsUpdates = True 
 
                 externals = sell_external_signals()
                 for excoin in externals:
-                    sell(excoin, 'Sell Signal') 
+                    sell(excoin, 'Sell Signal')
+                    CoinsUpdates = True 
             else:
             #Bot is paused 
                 remove_external_signals('buy')
@@ -882,15 +886,15 @@ if __name__ == '__main__':
   
                     #TP and SL Adjustment to lock in profits
                     if SellPriceWithFees >= TP and settings.USE_TRAILING_STOP_LOSS: 
-                            row['stop_loss'] =  row['take_profit'] + settings.TRAILING_STOP_LOSS 
+                            row['stop_loss'] =  row['stop_loss'] + settings.TRAILING_STOP_LOSS 
                             row['take_profit'] =   row['take_profit'] + settings.TRAILING_TAKE_PROFIT 
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
 
-                    #Check exposure_calcuated 
+                    #exposure_calcuated for balance_report screen
                     exposure_calcuated += round((SellPriceWithFees *row['volume']) ,0)
 
-                    #update px
+                    #update px for balance_report screen
                     coins_bought.loc[index, ['Lastpx']] = data['price'] 
                     coins_bought.loc[index, ['Profit']] = ProfitAfterFees_Perc
 
@@ -904,9 +908,11 @@ if __name__ == '__main__':
                         else:
                             sell_reason = "SL " + str(SL) + " reached"
                         sell(symbol,sell_reason)
+                        CoinsUpdates = True
                     if SellPriceWithFees > TP:
                         sell_reason = "TP " + str(TP) + " reached"
                         sell(symbol,sell_reason)
+                        CoinsUpdates = True
  
                     #Check Session stats
                     unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + ProfitAfterFees)
@@ -929,10 +935,11 @@ if __name__ == '__main__':
                             exposure_calcuated = 0
                             sell('ALL',sell_reason)
                             print(f'{sell_reason}')
+                            CoinsUpdates = True
                             break
 
             #Publish updates to files and screen
-            update_portfolio()
+            if CoinsUpdates: update_portfolio()
             balance_report()
             update_bot_stats()
             time.sleep(settings.RECHECK_INTERVAL) 
