@@ -176,14 +176,14 @@ def get_data_frame(symbol):
 def on_open(ws):
     print("Opened connection.")
     with open('WebSocket.txt','a+') as f:
-        f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
+        f.write(f'{datetime.now().timestamp()}OPEN\n')
 
 
 def on_close(ws, close_status_code, close_msg):
     if DEBUG:
         print("Closed connection.")
-    with open(WebSocket.txt,'a+') as f:
-        f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{datetime.now().timestamp()}CLOSE \n')
 
 
 def on_error(ws, error):
