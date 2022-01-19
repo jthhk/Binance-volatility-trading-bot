@@ -175,10 +175,16 @@ def get_data_frame(symbol):
 #############################START OF WEB SOCKET###########################################
 def on_open(ws):
     print("Opened connection.")
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
+
 
 def on_close(ws, close_status_code, close_msg):
     if DEBUG:
         print("Closed connection.")
+    with open(WebSocket.txt,'a+') as f:
+        f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
+
 
 def on_error(ws, error):
     #Handle disconnects/timeouts and try to reconnect 
@@ -186,6 +192,8 @@ def on_error(ws, error):
         print ('On_Error')
         print (os.sys.exc_info()[0:2])
         print ('Error info: %s' %(error))
+        with open('WebSocket.txt','a+') as f:
+            f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
     
     TriggerRestart = False
 
@@ -360,7 +368,7 @@ parsed_config = load_config(config_file)
 parsed_creds = load_config(creds_file)
 
 # Default no debugging
-DEBUG = False
+DEBUG = True
 
 # Load system vars
 TEST_MODE = parsed_config['script_options']['TEST_MODE']
@@ -402,5 +410,7 @@ def do_work():
     except Exception as e:
         print(f'MarketData_WebSoc: Exception do_work() 1: {e}')
         print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
+        with open('WebSocket.txt','a+') as f:
+            f.write(f'{datetime.now().timestamp()} |Exception do_work|{e}\n')
     except KeyboardInterrupt:
         sys.exit(0)   
