@@ -195,7 +195,7 @@ def on_error(ws, error):
         with open('WebSocket.txt','a+') as f:
             f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
     
-    TriggerRestart = False
+    TriggerRestart = True
 
     if ( "timed" in str(error) ):
         print ( "WebSocket Connenction is getting timed out: Please check the netwrork connection")
@@ -203,6 +203,8 @@ def on_error(ws, error):
         print ( "Network connection is lost: Cannot connect to the host. Please check the network connection ")
     elif( "unreachable host" in str(error) ):
         print ( "Cannot establish connetion with B6-Web: Network connection is lost or host is not running")
+    elif( "remote host was lost" in str(error) ):
+        print ( "Connection to remote host was lost: Network connection is lost or host is not running")
     else:
         TriggerRestart = False    
 
