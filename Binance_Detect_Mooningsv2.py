@@ -1,3 +1,55 @@
+"""
+jthhk/Binance-volatility-trading-bot (forked from Olorin Sledge Fork)
+Version: 0.5
+
+Disclaimer
+
+All investment strategies and investments involve risk of loss.
+Nothing contained in this program, scripts, code or repositoy should be
+construed as investment advice.Any reference to an investment's past or
+potential performance is not, and should not be construed as, a recommendation
+or as a guarantee of any specific outcome or profit.
+
+By using this program you accept all liabilities,
+and that no claims can be made against the developers,
+or others connected with the program.
+
+Binance_Detect_Mooningsv2 logic
+==============================
+
+Checks for existing bot files backs them up, asks to use them or remove
+ ../logs/YYYYMMDD_HH_MM_SS
+Uses 2 dataframes coins_bought and coins_sold while bot is runing 
+
+Starts the market data feed (redis database + snapshot 5m + websockets) in sub process 
+  MarketData_WebSoc.py
+Starts the external signals (also re-wrote to use market data from redis database)
+  jimbot-signal_framework 
+
+for each coin in the ticker list 
+	Skip if coin does not have marketdata (not -1)
+	Calc Take Profit and Stop Loss 
+	Trailing stop loss/take profit re-adjustment (lock in profits)
+	Check if bot should sell SINGLE coin and sell if coin Profit/loss met 
+    Check if bot should sell ALL coins if session Profit/loss met 
+
+Update the Bot portfolio json files (coins_bought / coins_sold )
+Display the balance report to screen 
+Update the Bot overall stats 
+Check Sub processes are runing, is problem Alert (May auto restart the market data) 
+
+CTRL+C
+==============================
+[1] Exit (default option)
+[2] Sell All Coins
+[3] Sell A Specific Coin
+[4] Resume Bot
+[5] Stop Purchases (or start)
+[6] OCO All Coins
+[7] Stop Market Data Socket (or start)
+==============================
+"""
+
 # use for environment variables
 import os 
 
@@ -400,9 +452,9 @@ def balance_report(EndOfAlgo=False):
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..please check, restart possible via CTRL+C')
         print(f'External Signals Status: {check_signal_threads()}')
         print(f'Market Data Feedhandler status: {feedhandler.is_alive}')
-        time.sleep(60)
-        #if not feedhandler.is_alive:
-        #    feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+        if not feedhandler.is_alive:
+            print(f'Market Data Feedhandler restarting....')
+            feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
     else:
         print(f'Subprocess running as expected - {AuctualSubProcess} of {ExpectedSubProcess}')
     print(f'--------')
