@@ -36,7 +36,7 @@ for each coin in the ticker list
 Update the Bot portfolio json files (coins_bought / coins_sold )
 Display the balance report to screen 
 Update the Bot overall stats 
-Check Sub processes are runing, is problem Alert (May auto restart the market data) 
+Check Sub processes are running, if market data a problem auto restart 
 
 CTRL+C
 ==============================
