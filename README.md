@@ -31,7 +31,7 @@ for each coin in the ticker list
 	Calc Take Profit and Stop Loss 
 	Trailing stop loss/take profit re-adjustment (lock in profits)
 	Check if bot should sell SINGLE coin and sell if coin Profit/loss met 
-    Check if bot should sell ALL coins if session Profit/loss met 
+        Check if bot should sell ALL coins if session Profit/loss met 
 
 Update the Bot portfolio json files (coins_bought / coins_sold )
 Display the balance report to screen 
