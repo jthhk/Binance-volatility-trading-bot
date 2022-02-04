@@ -10,7 +10,7 @@ THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
 i have removed all the files under root into folders - just trying to reduce noise 
 
 ## Jim Bot 
-
+```
 jthhk/Binance-volatility-trading-bot (forked from Olorin Sledge Fork)
 Version: 0.5
 
@@ -49,6 +49,7 @@ CTRL+C
 [7] Stop Market Data Socket (or start)
 ==============================
 
+```
 # Binance Volitility Trading Bot
 
 ## Description
