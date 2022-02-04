@@ -341,7 +341,7 @@ def balance_report(EndOfAlgo=False):
     global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused
 
     #Bot Summary 
-    # truncating some of the above values to the correct decimal places before printing
+    #truncating some of the above values to the correct decimal places before printing
     WIN_LOSS_PERCENT = 0
     if (trade_wins > 0) and (trade_losses > 0):
         WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses)) * 100, 2)
