@@ -1,34 +1,33 @@
 # use for environment variables
 import os
 
+# used for dates
+import time
+
 # use if needed to pass args to external modules
 import sys
-
-# used for math functions
-import math
-
-# used to create threads & dynamic loading of modules
-import threading
-import multiprocessing
-import importlib
-
-# used for directory handling
-import glob
-
-#discord needs import request
-import requests
 
 #redis
 import redis
 
+#TA-lib 
+import pandas_ta as ta
+
+#global Settings 
+import settings
+
 # Added for WebSocket Support
 import pandas as pd
-import pandas_ta as ta
 import websocket, pprint
 import ccxt
 import logging
 
-# Needed for colorful console output Install with: python3 -m pip install colorama (Mac/Linux) or pip install colorama (PC)
+#timezones
+import pytz
+
+
+
+# Needed for colorful console output
 from colorama import init
 
 init()
@@ -36,15 +35,9 @@ init()
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
-from binance.helpers import round_step_size
-from requests.exceptions import ReadTimeout, ConnectionError
 
 # used for dates
-from datetime import date, datetime, timedelta
-import time
-
-# used to repeatedly execute the code
-from itertools import count
+from datetime import datetime
 
 # used to store trades and sell assets
 import json
@@ -52,26 +45,30 @@ import json
 # used to display holding coins in an ascii table
 from prettytable import PrettyTable
 
-# Load helper modules
-from helpers.parameters import (
-    parse_args, load_config
-)
-
 # Load creds modules
 from helpers.handle_creds import (
-    load_correct_creds, test_api_key,
-    load_discord_creds
+    test_api_key
 )
 
-# my helper utils
-from helpers.os_utils import(rchop)
-
-from threading import Thread, Event
+# for colourful logging to the console
+class txcolors:
+    BUY = '\033[92m'
+    WARNING = '\033[93m'
+    SELL_LOSS = '\033[91m'
+    SELL_PROFIT = '\033[32m'
+    DIM = '\033[2m\033[35m'
+    DEFAULT = '\033[39m'
+    YELLOW = '\033[33m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    ENDC = '\033[0m'
 
 # logging needed otherwise slient fails
 logger = logging.getLogger('websocket')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
+
 
 def InitializeDataFeed():
     #######################################
@@ -82,7 +79,8 @@ def InitializeDataFeed():
     # ######################################    
  
     SOCKET_URL= "wss://stream.binance.com:9443/ws/"
-    SOCKET_LIST = ["coin@bookTicker","coin@kline_1m","coin@aggTrade"]
+    #SOCKET_LIST = ["coin@bookTicker","coin@kline_1m","coin@aggTrade"]
+    SOCKET_LIST = settings.TICKER_ITEMS
     current_ticker_list = []
     #-------------------------------------------------------------------------------
     # (a) Create redis database (MarketData) with a hash and list collection
@@ -91,25 +89,39 @@ def InitializeDataFeed():
     #  Why: I added the list sorting of the hash, otherwise I could not sort
     # (b) Define watch list of coins we want to monitor, see SOCKET_LIST + current_ticker_list 
     CoinsCounter = 0
-    tickers = [line.strip() for line in open(TICKERS_LIST)]
+    tickers = [line.strip() for line in open(settings.TICKERS_LIST)]
     print( str(datetime.now()) + " :Preparing watch list defined in tickers file...")
     for item in tickers:
         #Create Dataframes with coins
-        coin = item + PAIR_WITH
+        coin = item + settings.PAIR_WITH
         data =  {'symbol': coin}
 
-        info = client.get_symbol_info(coin)
-        step_size = info['filters'][2]['stepSize']
+        sleep_time = 2
+        num_retries = 4
+        str_error = ""
+        for x in range(0, num_retries): 
+            
+                try:
+                    info = client.get_symbol_info(coin)
+                    step_size = info['filters'][2]['stepSize']
 
-        MarketDataRec = {'symbol': coin , 'open': CoinsCounter, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',  'TendingDown': 0 , 'TendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
+                    MarketDataRec = {'symbol': coin , 'open': -1, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TrendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',   'TrendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
 
-        MarketData.hmset("L1:"+coin, MarketDataRec)
-        MarketData.lpush("L1", "L1:"+coin)
+                    MarketData.hmset("L1:"+coin, MarketDataRec)
+                    MarketData.lpush("L1", "L1:"+coin)
 
-        #get_data_frame(coin)  #Needs to move out
-        coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
-        current_ticker_list.extend(coinlist)
-        CoinsCounter += 1
+                    get_data_frame(coin)  #Needs to move out
+                    coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
+                    current_ticker_list.extend(coinlist)
+                    CoinsCounter += 1
+                except Exception as str_error:
+                    pass
+                if str_error:
+                    print(f'ERROR - {str_error} - sleeping for {sleep_time}' )
+                    time.sleep(sleep_time)  # wait before trying to fetch the data again
+                    sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
+                else:
+                    break
 
     print(f'{str(datetime.now())}: Total Coins: {CoinsCounter}')
 
@@ -125,15 +137,14 @@ def InitializeDataFeed():
         print(str('queried in ' + str(end - start) + ' with sort.'))
         print (current_ticker_list) 
 
-    #-------------------------------------------------------------------------------
+    #------------------------------------
     # (c) Create a Web Socket to get the market data 
-    if BACKTEST_PLAY:
-        BackTesterFile = 'backtester/20220108_08_43.txt'
-        num_lines = sum(1 for line in open(BackTesterFile))
-        SleepValue = MARKET_DATA_INTERVAL
+    if settings.BACKTEST_PLAY:
+        num_lines = sum(1 for line in open(settings.BACKTEST_FILE))
+        SleepValue = settings.MARKET_DATA_INTERVAL
         EstTime = (num_lines * SleepValue)/60
         print( str(datetime.now()) + " :Back tester enabled, Expected time will be " + str(EstTime) + " mins")
-        with open(BackTesterFile) as topo_file:
+        with open(settings.BACKTEST_FILE) as topo_file:
             for line in topo_file:
                 on_message('backtester',line)
                 time.sleep(SleepValue)
@@ -159,31 +170,71 @@ def is_nan(x):
     return (x == -1 )
 
 def get_data_frame(symbol):
-
-    global MarketPriceFrames
+    # On start up get the history from fetch_ohlcv cia cctx 
+    # - 5m used to calc the 5min (5T) and 15min (15T)
+    # - 15m used to calc the 1min (1T)
+    # UPDATED ARE THEN PROCESSED VIA THE WEBSOCKET
 
     exchange = ccxt.binance()
-    timeframes = ['5m','15m','4h', '1d']
-    for item in timeframes:	
-        macd = exchange.fetch_ohlcv(symbol, timeframe=item, limit=36)
-        df1  = pd.DataFrame(macd, columns=['time', 'open', 'high', 'low', 'close', 'volume'])
-        macd = df1.ta.macd(fast=12, slow=26)
-        Index = MarketPriceFrames.loc[MarketPriceFrames['symbol'] == symbol].index.item()
-        MarketPriceFrames.loc[Index, item] =  macd.iloc[35][1]
-        MarketPriceFrames.loc[Index, ['updated']] = datetime.now()
+
+    #Get 5m data to calc the 5m and 15m
+    timeframes = '5m'
+    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=240)
+    df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
+    df['time'] = pd.to_datetime(df['time'],unit='ms')
+    df.set_index('time', inplace=True)
+    list_of_coins[symbol + '_' + '5T'] = df
+        
+    calc_timeframes = ['5T', '15T']
+    for calc_item in calc_timeframes:	
+        dataset = df.resample(calc_item).agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
+        
+        rsi = dataset.ta.rsi()
+        adx = dataset.ta.adx()
+        macd = dataset.ta.macd(fast=12, slow=26)
+
+        get_rsi = rsi[-1:][0]
+        get_adx = adx['ADX_14'][len(adx)-1]
+        get_macd = macd['MACD_12_26_9'][len(macd)-1]
+
+        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
+        MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
+        MarketData.lpush("TA", "TA:"+symbol+calc_item)
+
+    #get thr 1m
+    timeframes = '1m'
+    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=34)
+    df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
+    df['time'] = pd.to_datetime(df['time'],unit='ms')
+    df.set_index('time', inplace=True)
+    list_of_coins[symbol + '_' + '1T'] = df
+
+    rsi = df.ta.rsi()
+    adx = df.ta.adx()
+    macd = df.ta.macd(fast=12, slow=26)
+
+    get_rsi = rsi[-1:][0]
+    get_adx = adx['ADX_14'][len(adx)-1]
+    get_macd = macd['MACD_12_26_9'][len(macd)-1]
+
+    timeframes = '1T'
+    MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
+    MarketData.hmset("TA:"+symbol+timeframes, MarketDataRec)
+    MarketData.lpush("TA", "TA:"+symbol+timeframes)
+    
 
 #############################START OF WEB SOCKET###########################################
 def on_open(ws):
     print("Opened connection.")
     with open('WebSocket.txt','a+') as f:
-        f.write(f'{datetime.now().timestamp()}OPEN\n')
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - OPEN\n')
 
 
 def on_close(ws, close_status_code, close_msg):
     if DEBUG:
         print("Closed connection.")
     with open('WebSocket.txt','a+') as f:
-        f.write(f'{datetime.now().timestamp()}CLOSE \n')
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - CLOSE \n')
 
 
 def on_error(ws, error):
@@ -193,7 +244,7 @@ def on_error(ws, error):
         print (os.sys.exc_info()[0:2])
         print ('Error info: %s' %(error))
         with open('WebSocket.txt','a+') as f:
-            f.write(f'{datetime.now().timestamp()} |{os.sys.exc_info()[0:2]}|{error}\n')
+            f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} |{os.sys.exc_info()[0:2]}|{error}\n')
     
     TriggerRestart = True
 
@@ -249,13 +300,60 @@ def on_message(ws, message):
             closePx = candle["c"]
             potential = -1
 
-
             if interval == "1m":
-                #1min/called standard
-
+                #1min/called standard - IF STATEMENT FOR FUTURE EXPANSION 
                 LastPx = MarketData.hget("L1:" + symbol,'price')
                 if is_candle_closed:
                     potential = (float(candle["l"]) / float(candle["h"])) * 100
+
+                    #Get Last closed Candle data and prep in dataframe
+                    closeminutes = int(datetime.utcfromtimestamp(candle["T"]/1000).strftime('%M'))
+                    closedate = datetime.fromtimestamp(candle["T"]/1000, tz=pytz.utc)
+                    closedate = closedate.replace(tzinfo=None)
+                    LastCandle = {closedate : {'open': float(candle["o"]), 'high':  float(candle["h"]), 'low':  float(candle["l"]),'close':  float(candle["c"]), 'volume' :  float(candle["v"])}}
+                    LastCandle = pd.DataFrame(LastCandle).T.reset_index().rename(columns={"index":"time"})
+                    LastCandle.set_index('time', inplace=True)
+
+                    #Sliding Window: append latest candle onto my history, cap using Len()-1,  save it for the next recalc 
+                    OneMinDataSet = list_of_coins[symbol + '_1T'] 
+                    OneMinDataSet = OneMinDataSet.tail(len(OneMinDataSet)-1)
+                    OneMinDataSet = pd.concat([OneMinDataSet,LastCandle])
+                    list_of_coins[symbol + '_1T'] = OneMinDataSet
+
+                    #Update the 5min data set
+                    calc_timeframes = ['1T']
+
+                    if closeminutes % 5 == 0: 
+                        #Sliding Window: Calc the 5min candle from the 1min dataset, then save
+                        calc_timeframes.append('5T')
+                        
+                        #Get last 5 1min rows, calc, save 1 5min row
+                        LastFiveCandle = OneMinDataSet.tail(5) 
+                        LastFiveCandle = LastFiveCandle.resample('5T').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
+                        LastFiveCandle - LastFiveCandle.tail(1)
+                        FiveMinDataSet = list_of_coins[symbol + '_' + '5T'] 
+                        FiveMinDataSet = FiveMinDataSet.tail(len(FiveMinDataSet)-1)
+                        FiveMinDataSet = pd.concat([FiveMinDataSet,LastFiveCandle])
+                        list_of_coins[symbol + '_' + '5T'] = FiveMinDataSet
+                    if closeminutes % 15 == 0: calc_timeframes.append('15T')
+
+                    for calc_item in calc_timeframes:	
+                        if calc_item == '1T':
+                            dataset = OneMinDataSet
+                        else:
+                            dataset = FiveMinDataSet.resample(calc_item).agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
+                        dataset = dataset.dropna()
+                        rsi = dataset.ta.rsi()
+                        adx = dataset.ta.adx()
+                        macd = dataset.ta.macd(fast=12, slow=26)
+                        
+                        get_rsi = rsi[-1:][0]
+                        get_adx = adx['ADX_14'][len(adx)-1]
+                        get_macd = macd['MACD_12_26_9'][len(macd)-1]
+                        
+                        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
+                        MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
+                        MarketData.lpush("TA", "TA:"+symbol+calc_item)
                 else:
                     closePx = candle["o"]
 
@@ -264,17 +362,13 @@ def on_message(ws, message):
                 
                 MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
-                data = MarketData.hgetall("L1:" + symbol)
-            else:
-                interval = candle["i"]
-                #if is_candle_closed:
-                    # TO DO: Need to do other timeframes
+                #data = MarketData.hgetall("L1:" + symbol)
 
         elif eventtype == "aggTrade":
             symbol = event["s"]
             LastPx = MarketData.hget("L1:" + symbol,'price')
-            TendingDown = float(MarketData.hget("L1:" + symbol,'TendingDown'))
-            TendingUp = float(MarketData.hget("L1:" + symbol,'TendingUp'))
+            TrendingDown = float(MarketData.hget("L1:" + symbol,'TrendingDown'))
+            TrendingUp = float(MarketData.hget("L1:" + symbol,'TrendingUp'))
             MakerCount = float(MarketData.hget("L1:" + symbol,'MakerCount'))
             TakerCount = float(MarketData.hget("L1:" + symbol,'TakerCount'))
 
@@ -282,14 +376,14 @@ def on_message(ws, message):
                 LastPx = event["p"]
 
             if event["p"] < LastPx:
-                TendingDown+= 1
+                TrendingDown+= 1
             else:
-                TendingDown = 0
+                TrendingDown = 0
 
             if event["p"] > LastPx:
-                TendingUp+= 1
+                TrendingUp+= 1
             else:
-                TendingUp = 0
+                TrendingUp = 0
 
             #markers and takers 
             is_market_maker = event["m"]
@@ -303,7 +397,7 @@ def on_message(ws, message):
             else:
                 MarketPressure = "Bear"
 
-            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TendingDown': TendingDown, 'TendingUp': TendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
+            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             data = MarketData.hgetall("L1:" + symbol)
 
@@ -315,7 +409,7 @@ def on_message(ws, message):
 
             #fall back as aggTrade or close may not be in yet
             if float(ClosePx) == -1:
-                LastPx = event["a"]
+                ClosePx = event["a"]
 
             if float(LastPx) == -1:
                 LastPx = event["a"]
@@ -350,59 +444,42 @@ def on_message(ws, message):
             print("------" + eventtype + "------")
 
         #Write events to log file to allow backtesting 
-        if BACKTEST_RECORD:
+        if settings.BACKTEST_RECORD:
             file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H_%M') + '.txt'
             with open(file_path, "a") as output_file:
                 output_file.write(message + '\n')
            
     except KeyboardInterrupt as ki:
-        sys.exit(0)    
+        print(f'{txcolors.WARNING}Market data feedhandler exixting - on_message.')
+        #sys.exit(0)    
 
 #############################END OF WEB SOCKET###########################################
 
-args = parse_args()
-DEFAULT_CONFIG_FILE = 'config.yml'
-DEFAULT_CREDS_FILE = 'creds.yml'
-
-config_file = args.config if args.config else DEFAULT_CONFIG_FILE
-creds_file = args.creds if args.creds else DEFAULT_CREDS_FILE
-parsed_config = load_config(config_file)
-parsed_creds = load_config(creds_file)
+#loads config.cfg into settings.XXXXX
+settings.init()
 
 # Default no debugging
-DEBUG = True
+DEBUG = False
 
-# Load system vars
-TEST_MODE = parsed_config['script_options']['TEST_MODE']
-DEBUG_SETTING = parsed_config['script_options'].get('DEBUG')
-AMERICAN_USER = parsed_config['script_options'].get('AMERICAN_USER')
-DATABASE = parsed_config['script_options']['DATABASE']
-
-#Back Testing Setting 
-MARKET_DATA_INTERVAL = parsed_config['script_options']['MARKET_DATA_INTERVAL']
-BACKTEST_PLAY = parsed_config['script_options']['BACKTEST_PLAY']
-BACKTEST_RECORD = parsed_config['script_options']['BACKTEST_RECORD']
-
-# Load trading vars
-PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
-FIATS = parsed_config['trading_options']['FIATS']
-
-CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
-CUSTOM_LIST_AUTORELOAD = parsed_config['trading_options']['CUSTOM_LIST_AUTORELOAD']
-TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
-
-# Load creds for correct environment
-access_key, secret_key = load_correct_creds(parsed_creds)
-
-# Authenticate with the client, Ensure API key is good before continuing
-if AMERICAN_USER:
-    client = Client(access_key, secret_key, tld='us')
+# Binance - Authenticate with the client, Ensure API key is good before continuing
+if settings.AMERICAN_USER:
+    client = Client(settings.access_key, settings.secret_key, tld='us')
 else:
-    client = Client(access_key, secret_key)
+    client = Client(settings.access_key, settings.secret_key)
+
+# If the users has a bad / incorrect API key.
+# this will stop the script from starting, and display a helpful error.
+api_ready, msg = test_api_key(client, BinanceAPIException)
+if api_ready is not True:
+    exit(f'{msg}')
+        
     
 #define redis DataBase connection and flush it
-MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
+MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
 MarketData.flushall()
+
+#Collection of dataframes to hold histroic raw data
+list_of_coins = {}
 
 def do_work():
     
@@ -413,6 +490,6 @@ def do_work():
         print(f'MarketData_WebSoc: Exception do_work() 1: {e}')
         print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
         with open('WebSocket.txt','a+') as f:
-            f.write(f'{datetime.now().timestamp()} |Exception do_work|{e}\n')
+            f.write(f'{time.strftime("%Y-%m-%d %H:%M")} |Exception do_work|{e}\n')
     except KeyboardInterrupt:
-        sys.exit(0)   
+        print(f'{txcolors.WARNING}Market data feedhandler exixting - do_work.')

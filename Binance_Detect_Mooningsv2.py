@@ -1,5 +1,4 @@
 # use for environment variables
-from logging import exception
 import os 
 
 # Clear the screen
@@ -12,7 +11,6 @@ import sys
 import math
 
 # used to create threads & dynamic loading of modules
-import threading
 import multiprocessing
 import importlib
 
@@ -21,6 +19,12 @@ import glob
 
 #discord needs import request
 import requests
+
+#Display child processes 
+import psutil
+
+#timezones
+import pytz
 
 #read json files
 import json
@@ -37,15 +41,11 @@ init()
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
-from binance.helpers import round_step_size
 from requests.exceptions import ReadTimeout, ConnectionError
 
 # used for dates
-from datetime import date, datetime, timedelta
+from datetime import datetime
 import time
-
-# used to repeatedly execute the code
-from itertools import count
 
 # used to store trades and sell assets
 import json
@@ -61,12 +61,6 @@ import redis
 
 #global Settings 
 import settings
-
-# used to display holding coins in an ascii table
-from prettytable import PrettyTable
-
-# my helper utils
-from helpers.os_utils import(rchop)
 
 # Load creds modules
 from helpers.handle_creds import (
@@ -164,14 +158,11 @@ def restart_signal_threads():
     try:
         for signalthread in signalthreads:
             if any(signalthread.name in word for word in settings.EXTSIGNAL_MODULES):
-                
                 name = signalthread.name
-                
                 print(f'Terminating thread {str(name)}')
                 signalthread.terminate()
-            
-                time.sleep(2)
 
+                time.sleep(2)
                 start_signal_thread(name)
     except:
         pass
@@ -217,7 +208,6 @@ def start_signal_thread(module):
     try:
         print(f'Starting {module}')
         mymodule[module] = importlib.import_module(module)
-        # t = threading.Thread(target=mymodule[module].do_work, args=())
         t = multiprocessing.Process(target=mymodule[module].do_work, args=())
         t.name = module
         t.daemon = True
@@ -232,6 +222,13 @@ def start_signal_thread(module):
         else:
             print(f'start_signal_thread(): Loading external signals exception: {e}')
 
+def stop_signal_thread(module):
+
+    try:
+        print(f'Terminating thread {str(module)}')
+        module.terminate()
+    except:
+        pass
 
 ##########################################################
 #Signal mgt
@@ -351,9 +348,12 @@ def balance_report(EndOfAlgo=False):
     if (trade_wins > 0) and (trade_losses == 0):
         WIN_LOSS_PERCENT = 100
 
-    #market_currprice =  GetPrice(settings.REF_COIN)   
-    market_currprice = 43000
+    data = MarketData.hgetall("L1:"+settings.REF_COIN)   
+    market_currprice = float(data['price'])  
     market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
+
+    Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
+    market_macd_5min = float(Ref_TA_5m['macd'])  
 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
@@ -372,32 +372,51 @@ def balance_report(EndOfAlgo=False):
     print(f'BUYING MODE     : {font if mode == "Live (REAL MONEY)" else txcolors.DEFAULT}{mode}{txcolors.DEFAULT}{txcolors.ENDC}')
     print(f'BACKTESTER      : {settings.BACKTEST_PLAY}')
     print(f'Buying Paused   : {bot_paused}')
+    if bot_paused:
+        print(f'{txcolors.WARNING}Purchase is paused, stop loss and take profit will continue to work...')
     print(f'')
     print(f'SESSION PROFIT (Inc Fees)')
     print(f'Realised        : {txcolors.SELL_PROFIT if session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Unrealised      : {txcolors.SELL_PROFIT if unrealised_session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{unrealised_session_profit_incfees_perc:.4f}% Est:${unrealised_session_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
+    print(f'REFERENCE PRICE :')
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT}")
+    print(f"Trending        : {txcolors.SELL_PROFIT if market_macd_5min > 0. else txcolors.SELL_LOSS}{market_macd_5min:.4f} ({settings.REF_COIN} MACD 5m){txcolors.DEFAULT}")
+    print(f'')
     print(f'ALL TIME DATA   :')
-    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (BTCUSDT Since STARTED){txcolors.DEFAULT}")
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
-    #print(f'External Signals: {extsigs}')
     print(f'External Signals: {settings.SIGNALLING_MODULES}')
+    current_process = psutil.Process()
+    children = current_process.children(recursive=True)
+    AuctualSubProcess = 0 
+    ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
+    for child in children:
+        AuctualSubProcess += 1
+    if AuctualSubProcess < ExpectedSubProcess: 
+        print(f'{txcolors.WARNING}Subprocess possibility missing missing..please check, restart possible via CTRL+C')
+        print(f'External Signals Status: {check_signal_threads()}')
+        print(f'Market Data Feedhandler status: {feedhandler.is_alive}')
+        time.sleep(60)
+        #if not feedhandler.is_alive:
+        #    feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+    else:
+        print(f'Subprocess running as expected - {AuctualSubProcess} of {ExpectedSubProcess}')
     print(f'--------')
-  
+
     #Bought Coins Table 
     if len(coins_bought.index) > 0:
         print(f'---Holding----')
         print_notimestamp(coins_bought.to_markdown())
-        print(f'')
+        print_notimestamp('\n')
     if EndOfAlgo:
         if len(coins_sold.index) > 0:
             print(f'---Sold----')
             print_notimestamp(coins_sold.to_markdown())
-            print(f'')
+            print_notimestamp('\n')
     else:
         #write out every time
         if not os.path.exists(settings.HISTORY_LOG_FILE):
@@ -413,6 +432,10 @@ def balance_report(EndOfAlgo=False):
 # Bot Session Mgt
 ###############################################################
 def CheckForExistingSession():
+
+    global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total
+    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
+    global  session_profit_incfees_perc,session_profit_incfees_total
 
     # Check if files exist and if they do ask what to do 
     if os.path.isfile(settings.bot_stats_file_path) and os.stat(settings.bot_stats_file_path).st_size!= 0:
@@ -450,8 +473,8 @@ def CheckForExistingSession():
             bot_stats = json.load(file)
             bot_started_datetime = datetime.strptime(bot_stats['botstart_datetime'], '%Y-%m-%d %H:%M:%S.%f')
             total_capital = bot_stats['total_capital']
-            historic_profit_incfees_perc =  bot_stats['session_profit_incfees_perc']
-            historic_profit_incfees_total = bot_stats['session_profit_incfees_total']
+            historic_profit_incfees_perc =  bot_stats['historicProfitIncFees_Percent']
+            historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
             trade_losses = bot_stats['tradeLosses']
             market_startprice = bot_stats['market_startprice']
@@ -472,16 +495,18 @@ def sell(symbol,reason):
         Sell_Coins_Details = coins_bought[coins_bought['symbol'] == symbol]
     
     for index, row in Sell_Coins_Details.iterrows():
-        FILLS_TOTAL = FILLS_QTY = FILLS_FEE  = 0
+        FillQty = FillPx = TotalFillQty = TotalFillCost  = 0
         coin = row['symbol']
-        if settings.TEST_MODE:
-            data = MarketData.hgetall("L1:"+coin)
-            FILLS_QTY = float(row['volume'])
-            FILL_PRICE = float(data['price'])
-            FILLS_TOTAL = FILLS_QTY * FILL_PRICE
-            orderID = 0
-            TxnTime =  datetime.now().timestamp()
-        else:
+        data = MarketData.hgetall("L1:"+coin)
+        TotalFillQty = float(row['volume'])
+        FillPx = float(data['price'])
+        TotalFillCost = TotalFillQty * FillPx
+        FillFee = 0
+        orderID = 0
+        TxnTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        BuyPrice = float(row['avgPrice'])
+
+        if not settings.TEST_MODE:
             try:
                 order_details = client.create_order(
                     symbol = coin,
@@ -490,37 +515,36 @@ def sell(symbol,reason):
                     quantity = row['volume']
                 )
 
-            # error handling here in case position cannot be placed
-            except Exception as e:
-                print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume coins_bought: {row['volume']}\nPrice:{row['avgPrice']}\nException: {e}")
-
-            orderID = order_details['orderId']
-            TxnTime = order_details['transactTime']
-
-            # loop through each 'fill':
-            for fills in order_details['fills']:
-                FILL_PRICE = float(fills['price'])
-                FILL_QTY = float(fills['qty'])
-                FILLS_FEE += float(fills['commission'])
+                orderID = order_details['orderId']
+                TxnTime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
+                FillFee = float(0.00000000)
+                # loop through each 'fill':
+                for fills in order_details['fills']:
+                    FillPx = float(fills['price'])
+                    FillQty = float(fills['qty'])
+                    FillFee = FillFee + float(fills['commission'])
                 
                 # check if the fee was in BNB. If not, log a nice warning:
                 if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
                     print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
-                FILLS_TOTAL += (FILL_PRICE * FILL_QTY)
-                FILLS_QTY += FILL_QTY
+                TotalFillCost  += (FillPx * FillQty)
+                TotalFillQty += FillQty
+
+            # error handling here in case position cannot be placed
+            except Exception as e:
+                print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume coins_bought: {row['volume']}\nPrice:{row['avgPrice']}\nException: {e}")
+                reason = e  + ' - ' + reason
 
         # calculate average fill price:
-        SellPrice = float(FILLS_TOTAL / FILLS_QTY)
+        SellPrice = float( TotalFillCost / TotalFillQty)
         sellFee = (SellPrice * (settings.TRADING_FEE/100))
-        sellFeeTotal = (row['volume'] * SellPrice) * (settings.TRADING_FEE/100)
         SellPriceWithFees = SellPrice + sellFee
 
-        BuyPrice = float(row['avgPrice'])
+       
         buyFee = (BuyPrice * (settings.TRADING_FEE/100))
-        buyFeeTotal = (row['volume'] * BuyPrice) * (settings.TRADING_FEE/100)
         BuyPricePlusFees = BuyPrice + buyFee
 
-        ProfitAfterFees = SellPriceWithFees - BuyPricePlusFees
+        ProfitAfterFees = (SellPriceWithFees - BuyPricePlusFees) * row['volume']
         ProfitAfterFees_Perc = float(((BuyPricePlusFees - SellPriceWithFees) / BuyPricePlusFees) * 100)
 
         if (SellPriceWithFees) >= (BuyPricePlusFees):
@@ -530,11 +554,11 @@ def sell(symbol,reason):
         
         #Session Profit
         session_profit_incfees_total = session_profit_incfees_total + ProfitAfterFees
-        session_profit_incfees_perc = session_profit_incfees_perc + ((session_profit_incfees_total/settings.total_capital_config) * 100)
+        session_profit_incfees_perc = (session_profit_incfees_total/settings.total_capital_config) * 100
         
         #Session Profit + History 
         historic_profit_incfees_total = historic_profit_incfees_total + ProfitAfterFees
-        historic_profit_incfees_perc = historic_profit_incfees_perc + ((historic_profit_incfees_total/settings.total_capital_config) * 100)
+        historic_profit_incfees_perc = (historic_profit_incfees_total/settings.total_capital_config) * 100
 
         # create object with received data from Binance
         transactionInfo = pd.DataFrame({
@@ -542,8 +566,8 @@ def sell(symbol,reason):
             'orderId': orderID,
             'timestamp': TxnTime,
             'avgPrice': float(SellPrice),
-            'volume': float(FILLS_QTY),
-            'tradeFeeBNB': float(FILLS_FEE),
+            'volume': float(TotalFillQty),
+            'tradeFeeBNB': float(FillFee),
             'tradeFeeUnit': sellFee,
             'profit' : ProfitAfterFees,
             'perc_profit' : ProfitAfterFees_Perc,
@@ -551,10 +575,10 @@ def sell(symbol,reason):
         },index=[0])
 
         # Log trade
-        write_log(f"\tSell\t{coin}\t{FILLS_QTY}\t{str(SellPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
+        write_log(f"\tSell\t{coin}\t{TotalFillQty}\t{str(SellPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
         coins_sold = coins_sold.append(transactionInfo,ignore_index=True)
         coins_bought = coins_bought.drop(index=index)
-        msg_discord(f"{str(datetime.now())}|Sell|{coin}|{FILLS_QTY}|{str(SellPrice)}|{settings.PAIR_WITH}|{SellPrice}|{ProfitAfterFees:.{decimals()}f}|{ProfitAfterFees_Perc:.2f}|{reason}")
+        msg_discord(f"{str(datetime.now())}|Sell|{coin}|{TotalFillQty}|{str(SellPrice)}|{settings.PAIR_WITH}|{SellPrice}|{ProfitAfterFees:.{decimals()}f}|{ProfitAfterFees_Perc:.2f}|{reason}")
 
 def buy(symbol):
     '''Place Buy market orders for each volatile coin found'''
@@ -573,19 +597,15 @@ def buy(symbol):
         print(f"{txcolors.BUY}Preparing to buy {volume} of {symbol} @ ${coin['price']}{txcolors.DEFAULT}")
         msg1 = str(datetime.now()) + ' | BUY: ' + symbol + '. V:' +  str(volume) + ' P$:' + str(coin['price'])
         msg_discord(msg1)
-
-        if settings.TEST_MODE:
-            #In Test mode so just writing to a file
-            transactionInfo = pd.DataFrame({
-                'symbol': symbol,
-                'timestamp': datetime.now().timestamp(),
-                'orderId': 0,
-                'avgPrice': float(coin['price']),
-                'volume': volume,
-                'take_profit' : settings.TAKE_PROFIT,
-                'stop_loss' :settings.STOP_LOSS
-            },index=[0])
-        else:    
+     
+        orderID = FillFee = FillQty = FillPx = TotalFillQty = TotalFillCost  = 0
+        data = MarketData.hgetall("L1:"+symbol)
+        TotalFillQty = volume
+        FillPx = float(data['price'])
+        TotalFillCost = TotalFillQty * FillPx
+        txntime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if not settings.TEST_MODE:
             # try to create a real order if the test orders did not raise an exception
             try:
                 order_details = client.create_order(
@@ -595,50 +615,49 @@ def buy(symbol):
                     quantity = volume
                 )
 
-            # error handling here in case position cannot be placed
-            except Exception as e:
-                print(f'buy() exception: {e}')
-
-            FILLS_TOTAL = FILLS_QTY = FILLS_FEE = 0
-            # loop through each 'fill':
-            for fills in order_details['fills']:
-                FILL_PRICE = float(fills['price'])
-                FILL_QTY = float(fills['qty'])
-                FILLS_FEE += float(fills['commission'])
+                orderID = order_details['orderId']
+                txntime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
+                FillFee = float(0.00000000)
+                # loop through each 'fill':
+                for fills in order_details['fills']:
+                    FillPx = float(fills['price'])
+                    FillQty = float(fills['qty'])
+                    FillFee = FillFee + float(fills['commission'])
                 
                 # check if the fee was in BNB. If not, log a nice warning:
                 if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
                     print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
-                # quantity of fills * price
-                FILLS_TOTAL += (FILL_PRICE * FILL_QTY)
-                # add to running total of fills quantity
-                FILLS_QTY += FILL_QTY
+                TotalFillCost  += (FillPx * FillQty)
+                TotalFillQty += FillQty
+            
+            except Exception as e:
+                print(f'buy() exception: {e}')    
 
-            # calculate average fill price:
-            FILL_AVG = (FILLS_TOTAL / FILLS_QTY)
-            tradeFeeApprox = float(FILL_AVG) * (settings.TRADING_FEE/100)
+        # calculate average fill price:
+        BuyPrice = float( TotalFillCost / TotalFillQty)
+        buyFee = (BuyPrice * (settings.TRADING_FEE/100))
 
-            # create object with received data from Binance
-            transactionInfo = pd.DataFrame({
-                'symbol': order_details['symbol'],
-                'orderId': order_details['orderId'],
-                'timestamp': order_details['transactTime'],
-                'avgPrice': float(FILL_AVG),
-                'volume': float(FILLS_QTY),
-                'tradeFeeBNB': float(FILLS_FEE),
-                'tradeFeeUnit': tradeFeeApprox,
-                'take_profit' : settings.TAKE_PROFIT,
-                'stop_loss' :settings.STOP_LOSS
-            },index=[0])
+        # create object with received data from Binance
+        transactionInfo = pd.DataFrame({
+            'symbol': symbol,
+            'orderId': orderID,
+            'timestamp': txntime,
+            'avgPrice': float(BuyPrice),
+            'volume': float(TotalFillQty),
+            'tradeFeeBNB': float(FillFee),
+            'tradeFeeUnit': buyFee,
+            'take_profit' : settings.TAKE_PROFIT,
+            'stop_loss' :settings.STOP_LOSS
+        },index=[0])
+
         # Log trade
         write_log(f"\tBuy\t{symbol}\t{volume}\t{coin['price']}\t{settings.PAIR_WITH}")
         coins_bought = coins_bought.append(transactionInfo,ignore_index=True)
-    
-
+        # error handling here in case position cannot be placed
 
 def menu():
 
-    global bot_manual_pause
+    global bot_manual_pause,feedhandler
     END = False
     LOOP = True
 
@@ -652,14 +671,18 @@ def menu():
         else:
             print_notimestamp(f'\n[5] Stop Purchases')
         print_notimestamp(f'\n[6] OCO All Coins')
+        if feedhandler.is_alive: 
+            print_notimestamp(f'\n[7] Stop Market Data Socket')
+        else:
+            print_notimestamp(f'\n[7] Start Market Data Socket')               
         print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
         menuoption = input()
 
         if menuoption == "1" or menuoption == "":
             print_notimestamp('\n')
-            sys.exit(0)
             END = True
             LOOP = False
+            sys.exit(0)
         elif menuoption == "2":
             print_notimestamp('\n')
             sell('ALL','Sell All Coins menu option chosen!')
@@ -668,9 +691,9 @@ def menu():
             LOOP = False            
         elif menuoption == "3":
             while not menuoption.upper() == "N":
-                if len(coins_sold.index) > 0:
+                if len(coins_bought.index) > 0:
                     # ask for coin to sell
-                    print_notimestamp(coins_sold.to_markdown())
+                    print_notimestamp(coins_bought.to_markdown())
                     print_notimestamp(f'{txcolors.WARNING}\nType in the Symbol you wish to sell, including pair (i.e. BTCUSDT) or type N to return to Menu (N)?{txcolors.DEFAULT}')
                     menuoption = input()
                     if menuoption == "":
@@ -693,6 +716,13 @@ def menu():
             subprocess.Popen(cmd).wait()
             LOOP = False
             END = True
+        elif menuoption == "7":
+            if feedhandler.is_alive: 
+                stop_signal_thread(feedhandler)
+                feedhandler.is_alive = False
+            else:
+                feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
+
     return END
 
 if __name__ == '__main__':
@@ -704,7 +734,7 @@ if __name__ == '__main__':
 
     global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total,bot_paused
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated
+    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated,feedhandler
 
     historic_profit_incfees_perc = historic_profit_incfees_total = 0
     trade_wins=trade_losses=market_startprice=unrealised_session_profit_incfees_total=unrealised_session_profit_incfees_perc = 0
@@ -750,10 +780,15 @@ if __name__ == '__main__':
     remove_external_signals('sell')
     remove_external_signals('pause')
 
-    # load signalling modules
     mymodule = {}
+
+    #Start MarketData Thread
+    feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
+
+    # load signalling modules
     signalthreads = start_signal_threads()   
     
+
     if not settings.TEST_MODE:
         print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
         print('WARNING: Waiting 10 seconds before live trading as a security measure!')
@@ -764,8 +799,7 @@ if __name__ == '__main__':
     MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
     bot_manual_pause = False
     is_bot_running = True
-    #market_startprice =  GetPrice(settings.REF_COIN)   
-    market_startprice = 43000
+    market_startprice = 0
 
     while is_bot_running:
         try:
@@ -774,7 +808,7 @@ if __name__ == '__main__':
             if  not (os.path.exists("signals/pausebot.pause") or bot_manual_pause):
             #only if Bot is NOT paused 		
                 #if settings.REINVEST_PROFITS:
-                #    settings.TRADE_TOTAL = total_capital / settings.TRADE_SLOTS
+                #     settings.Reinvest_profits(total_capital)
                 bot_paused = False
 
                 externals = buy_external_signals()
@@ -792,10 +826,8 @@ if __name__ == '__main__':
             #Bot is paused 
                 remove_external_signals('buy')
                 if bot_manual_pause:
-                    print(f'{txcolors.WARNING}Purchase paused manually, stop loss and take profit will continue to work...')
                     msg = str(datetime.now()) + ' | PAUSEBOT.Purchase paused manually, stop loss and take profit will continue to work...'
                 else:
-                    print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
                     msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
                 bot_paused = True
                 msg_discord(msg)
@@ -804,12 +836,20 @@ if __name__ == '__main__':
             exposure_calcuated = 0  
             unrealised_session_profit_incfees_total = 0 
             unrealised_session_profit_incfees_perc = 0
+            botIscheckingCoins = False
+
+            #Check i have a prices, it may take a few seconds at the start 
+            if market_startprice <= 0:
+                refpx = MarketData.hgetall("L1:"+settings.REF_COIN)   
+                if refpx: market_startprice = float(refpx['price'])  
 
             for index, row in coins_bought.iterrows():
                 symbol = row['symbol']
                 data = MarketData.hgetall("L1:"+symbol)
+
                 #Check i have a price, it may take a few seconds at the start 
                 if len(data) > 1 and bool(data['updated']) and float(data['price']) > 0:
+                    botIscheckingCoins = True 
                     SellPrice =  float(data['price'])
                     sellFee = (SellPrice * (settings.TRADING_FEE/100))
                     sellFeeTotal = (row['volume'] * SellPrice) * (settings.TRADING_FEE/100)
@@ -829,11 +869,12 @@ if __name__ == '__main__':
   
                     #TP and SL Adjustment to lock in profits
                     if SellPriceWithFees >= TP and settings.USE_TRAILING_STOP_LOSS: 
-                            row['stop_loss'] =  row['take_profit'] + settings.TRAILING_STOP_LOSS 
+                            row['stop_loss'] =  row['take_profit'] - settings.TRAILING_STOP_LOSS 
                             row['take_profit'] =   row['take_profit'] + settings.TRAILING_TAKE_PROFIT 
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
-
+                            TP = float(BuyPrice) + ((float(BuyPrice) * (row['take_profit'])/100))
+                    
                     #exposure_calcuated for balance_report screen
                     exposure_calcuated += round((SellPriceWithFees *row['volume']) ,0)
 
@@ -844,16 +885,16 @@ if __name__ == '__main__':
                     # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
                     if SellPriceWithFees < SL: 
                         if settings.USE_TRAILING_STOP_LOSS:
-                            if ProfitAfterFees_Perc >= 0:
-                                sell_reason = "TTP " + str(SL) + " reached"
-                            else:
-                                sell_reason = "TSL " + str(SL) + " reached"
+                            sell_reason = "TSL " + str(SL) + " reached"
                         else:
                             sell_reason = "SL " + str(SL) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
                     if SellPriceWithFees > TP:
-                        sell_reason = "TP " + str(TP) + " reached"
+                        if settings.USE_TRAILING_STOP_LOSS:
+                            sell_reason = "TTP " + str(TP) + " reached"
+                        else:
+                            sell_reason = "TP " + str(TP) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
  
@@ -883,7 +924,7 @@ if __name__ == '__main__':
 
             #Publish updates to files and screen
             if CoinsUpdates: update_portfolio()
-            balance_report()
+            if botIscheckingCoins: balance_report()
             update_bot_stats()
             time.sleep(settings.RECHECK_INTERVAL) 
 

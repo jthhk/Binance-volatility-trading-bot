@@ -3,7 +3,6 @@ script_options:
   # Switch between testnet and mainnet
   # Setting this to False will use REAL funds, use at your own risk
   TEST_MODE: True
-  LOG_TRADES: True
   LOG_FILE: 'trades.txt'
   DEBUG: False
 
@@ -14,11 +13,15 @@ script_options:
   # Database to be used by WebSocket/signal files
   DATABASE: 0
   WEBSOCKET: True
+  
+  #"coin@bookTicker","coin@kline_1m","coin@aggTrade"
+  TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade"]
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
   BACKTEST_PLAY: False
   BACKTEST_RECORD: False
+  BACKTEST_FILE: 'backtester/20220108_08_43.txt'
   
 # These options apply to the trading methods the script executes
 trading_options:
@@ -26,11 +29,6 @@ trading_options:
   # select your base currency to use for trading (trade for example USDT pairs)
   PAIR_WITH: USDT
 
-  # Total amount per trade (your base currency balance must be at least MAX_COINS * QUANTITY)
-  # Binance uses a minimum of 10 USDT per trade, add a bit extra to enable selling if the price drops.
-  # Recommended: no less than 12 USDT. Suggested: 15 or more.
-  QUANTITY: 20
-  
   # Total amount per trade (your base currency balance must be at least TRADE_SLOTS * TRADE_TOTAL)
   # Binance uses a minimum of 10 USDT per trade, add a bit extra to enable selling if the price drops.
   # Recommended: no less than 12 USDT. Suggested: 15 or more.
@@ -65,18 +63,11 @@ trading_options:
   # Maximum number of trade 'slots' at any time (your USDT balance must be at least MAX_COINS * QUANTITY)
   MAX_COINS: 5
 
-  # the amount of time in MINUTES to calculate the difference from the current price (minimum: 1).
-  TIME_DIFFERENCE: 1
-
   # Number of times to check for TP/SL during each TIME_DIFFERENCE (minimum: 1).
-  # Don't spam the Binance API, you will be banned (max 1200 requests per minute per IP).
   RECHECK_INTERVAL: 1
 
-  # the difference in % between the first and second checks for the price.
-  CHANGE_IN_PRICE: 0.5
-
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -2.2
+  STOP_LOSS: -1.9
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: 1.9
@@ -93,7 +84,7 @@ trading_options:
   # when hit TAKE_PROFIT, move TAKE_PROFIT up by TRAILING_TAKE_PROFIT percentage points
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
-  TRAILING_STOP_LOSS: -0.4
+  TRAILING_STOP_LOSS: -0.2
   TRAILING_TAKE_PROFIT: 0.6
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
@@ -103,10 +94,6 @@ trading_options:
   SESSION_TPSL_OVERRIDE: True
   SESSION_TAKE_PROFIT: 5
   SESSION_STOP_LOSS: -2
-
-  # Let a signalling module control sell of coin
-  # NOTE - If USE_TRAILING_STOP_LOSS: True then this needs to be False
-  SELL_ON_SIGNAL_ONLY: False
 
   # Trading fee in % per trade.
   # If using 0.075% (using BNB for fees) you must have BNB in your account to cover trading fees.
@@ -128,6 +115,9 @@ trading_options:
     #- the_snail_v2 
     #- btc_pause
   
+  #Start the market data module, this is seperate so when stop/start signals it is not impacted
+  MARKET_DATA_MODULE: 'MarketData_WebSoc'
+
   SIGNALLING_MODULES:
     # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
     # the default ones WILL NOT work due to customisations for my specific purposes
@@ -141,7 +131,6 @@ trading_options:
     # - scoobie_signalbuy_thesnailv3
     # - the_snail_v2 
     # - btc_pause
-      - MarketData_WebSoc
       - jimbot-signal_framework
 
     

@@ -31,6 +31,7 @@ def DoCycle():
     CoinsBuyCounter = 0
     Custom_Fields = ""
     StartTime = time.time()
+    NeedToAlerted = True
 
     #Get Held coins so we don't but 2 of the same
     held_coins_list = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss'])
@@ -40,16 +41,12 @@ def DoCycle():
     else:
         held_coins_list = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss'])
 
-    #Get bitcoinpx for ref 
-    get_histbtc = float(49000)  # TODO Source
-    
     #Do the coins with the  most potential
     GetCoinsInOrder = MarketData.sort('L1',alpha=True,desc=False,by='*->potential')
 
     #Get latest prices from database
     for key in GetCoinsInOrder:
         data = MarketData.hgetall(key)
-        
         if len(data) > 1 and bool(data['updated']) and float(data['price']) > 0:
             symbol = data['symbol']
             CoinAlreadyBought = held_coins_list[held_coins_list['symbol'].str.contains(symbol)]    
@@ -80,27 +77,49 @@ def DoCycle():
                     bid_price = float(data['BBPx'])
                     ask_price = float(data['BAPx'])
                     close_price = float(data['close'])
-                    current_bid = float(data['BBPx'])
-                    current_ask = float(data['BAPx'])
+                    #current_bid = float(data['BBPx'])
+                    #current_ask = float(data['BAPx'])
                     potential = float(data['potential'])  # (Low/High)*100
 
-                    spread = float(data['spread'])  #ask-Bid
-                    WeightedAvgPrice = float(data['WeightedAvgPrice'])  # ((Askpx * BuyQty) (Bidpx * AskQty)) / (BuyQty+BuyQty)
-                    mid = float(data['mid'])  #Bid-Ask/2
-                    orderBookDemand = data['orderBookDemand']  #BidQty > AskQty = Bull else Bear
+                    #spread = float(data['spread'])  #ask-Bid
+                    #WeightedAvgPrice = float(data['WeightedAvgPrice'])  # ((Askpx * BuyQty) (Bidpx * AskQty)) / (BuyQty+BuyQty)
+                    #mid = float(data['mid'])  #Bid-Ask/2
+                    #orderBookDemand = data['orderBookDemand']  #BidQty > AskQty = Bull else Bear
 
-                    TendingDown = float(data['TendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
-                    TendingUp = float(data['TendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
-                    TakerCount = float(data['TakerCount'])  #cum vol of Taker trades
-                    MakerCount = float(data['MakerCount'])  #cum vol of marker trades
-                    MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
+                    #TendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
+                    #TendingUp = float(data['TrendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
+                    #TakerCount = float(data['TakerCount'])  #cum vol of Taker trades
+                    #MakerCount = float(data['MakerCount'])  #cum vol of marker trades
+                    #MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
                     
                     #Candle data 
-                    macd1m = float(data['open'])  
-                    macd5m = float(100)
-                    macd15m = float(100)
-                    macd4h = float(100)
-                    macd1d = float(100)
+                    Bitcoin_TA_1m = MarketData.hgetall('TA:BTCUSDT1T')
+                    TA_1m = MarketData.hgetall('TA:'+symbol+'1T')
+                    TA_5m = MarketData.hgetall('TA:'+symbol+'5T')
+                    TA_15m = MarketData.hgetall('TA:'+symbol+'15T')
+
+                    #MACD crossing above zero is considered bullish, while crossing below zero is bearish.
+                    get_histbtc = float(Bitcoin_TA_1m['macd'])  
+                    macd1m = float(TA_1m['macd'])
+                    macd5m = float(TA_5m['macd'])
+                    macd15m = float(TA_15m['macd'])
+
+                    #If the RSI is over 70, this is generally seen as over-bought and price might move down. 
+                    #A reading of 30 indicates a market that is over-sold and price might move up
+                    #------------------------------
+                    #rsi1m = float(TA_1m['rsi'])
+                    #rsi5m = float(TA_5m['rsi'])
+                    #rsi15m = float(TA_15m['rsi'])
+
+                    #ADX Value	Trend Strength (up or down)
+                    #0-25	Absent or Weak Trend
+                    #25-50	Strong Trend
+                    #50-75	Very Strong Trend / 
+                    #75-100	Extremely Strong Trend
+                    #------------------------------
+                    #adx1m = float(TA_1m['adx'])
+                    #adx5m = float(TA_5m['adx'])
+                    #adx15m = float(TA_15m['adx'])
 
                     #Standard Strategy Calcs 
                     #using last Candle lowpx and highpx 
@@ -144,21 +163,26 @@ def DoCycle():
                     TimeFrameCheck = False 
                     TimeFrameOption = False
 
-                    #Different MOVEMENT models 
-                    if MOVEMENT == "MOVEMENT":
-                        TimeFrameOption = (movement >= (settings.TRAILING_TAKE_PROFIT + 0.2))
-                    elif MOVEMENT ==  "ATR_MOVEMENT":
-                        TimeFrameOption = (atr_percentage >= settings.TRAILING_TAKE_PROFIT)
-                    else:
-                        TimeFrameOption = True
+                    if get_histbtc >= 0:
+                        #Different MOVEMENT models 
+                        if MOVEMENT == "MOVEMENT":
+                            TimeFrameOption = (movement >= (settings.TAKE_PROFIT + 0.2))
+                        elif MOVEMENT ==  "ATR_MOVEMENT":
+                            TimeFrameOption = (atr_percentage >= settings.TAKE_PROFIT)
+                        else:
+                            TimeFrameOption = True
 
-                    #Main Strategy checker
-                    if TimeFrameOption:
-                        RealTimeCheck = (profit_min < current_potential < profit_max and last_price < buy_below)
-                        if RealTimeCheck:
-                            TimeFrameCheck = (macd1m >= 0 and macd5m  >= 0 and macd15m >= 0 and macd1d >= 0 and get_histbtc >= 0)
-                            if TimeFrameCheck:
-                                BuyCoin = True
+                        #Main Strategy checker
+                        if TimeFrameOption:
+                            RealTimeCheck = (profit_min < current_potential < profit_max and last_price < buy_below)
+                            if RealTimeCheck:
+                                TimeFrameCheck = (macd1m >= 0 and macd5m  >= 0 and macd15m >= 0)
+                                if TimeFrameCheck:
+                                    BuyCoin = True
+                    else:
+                        if NeedToAlerted:
+                            print (f'{SIGNAL_NAME} : Bitcoin 1m MACD is not good : {get_histbtc}\n')
+                            NeedToAlerted = False
 
                     #Custom logging output for generic debug mode below
                     Custom_Fields = (
@@ -171,9 +195,13 @@ def DoCycle():
                     if BuyCoin:
                         CoinsBuyCounter += 1
                         # add to signal
-                        with open(f'signals/{SIGNAL_NAME}{signal_file_type_buy}', 'a+') as f:
-                            f.write(str(symbol) + '\n')
-                            print(f'{str(datetime.now())}:{SIGNAL_NAME} - BUY - {symbol} \n')
+                        try:
+                            with open(f'signals/{SIGNAL_NAME}{signal_file_type_buy}', 'a+') as f:
+                                f.write(str(symbol) + '\n')
+                                if settings.DEBUG: print(f'{str(datetime.now())}:{SIGNAL_NAME} - BUY - {symbol} \n')
+                        except Exception as e:
+                            sleep(1)
+                            continue
 
                     #-----------------------------------------------------------------
                     #Debug Output
@@ -213,9 +241,7 @@ def DoCycle():
                         print('\n\n-------MACD--------\n'
                             f'macd1m:{macd1m} |'
                             f'macd5m:{macd5m} |'
-                            f'macd15m:{macd15m} |'
-                            f'macd4h:{macd4h} |'
-                            f'macd1d:{macd1d}\n'
+                            f'macd15m:{macd15m}\n'
                             )
                         print ("\n-------Bitcoin--------")
                         print (f"get_histbtc:   {get_histbtc}")
@@ -239,4 +265,5 @@ def do_work():
             DoCycle()
             time.sleep(settings.RECHECK_INTERVAL * 2 ) 
     except KeyboardInterrupt:
+        print('Signal file exixting.')
         sys.exit(0)

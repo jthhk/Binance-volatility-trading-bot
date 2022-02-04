@@ -20,13 +20,18 @@ def is_fiat():
     else:
         return False
         
+def Reinvest_profits(total_capital):
+    TRADE_TOTAL = total_capital
+    total_capital_config = TRADE_SLOTS * TRADE_TOTAL
+    
+
 def init():
 
     global AMERICAN_USER,access_key, secret_key,DATABASE,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE
     global SIGNALLING_MODULES,TEST_MODE,REINVEST_PROFITS,TRADE_TOTAL,TRADE_SLOTS,SESSION_STOP_LOSS,TRADING_FEE,SELL_ON_SIGNAL_ONLY
     global USE_TRAILING_STOP_LOSS,SESSION_TPSL_OVERRIDE, DEBUG, MSG_DISCORD,DISCORD_WEBHOOK,PAIR_WITH,EXTSIGNAL_MODULES,coins_sold_file_path
-    global TRAILING_TAKE_PROFIT,TRAILING_STOP_LOSS,total_capital_config,SESSION_TAKE_PROFIT,BACKTEST_PLAY,MOVEMENT,RECHECK_INTERVAL
-    global TAKE_PROFIT, STOP_LOSS,CHANGE_IN_PRICE,REF_COIN
+    global TRAILING_TAKE_PROFIT,TRAILING_STOP_LOSS,total_capital_config,SESSION_TAKE_PROFIT,BACKTEST_PLAY,MOVEMENT,RECHECK_INTERVAL,TICKER_ITEMS
+    global TAKE_PROFIT, STOP_LOSS,CHANGE_IN_PRICE,REF_COIN,BACKTEST_FILE,BACKTEST_RECORD,MARKET_DATA_INTERVAL,TICKERS_LIST,MARKET_DATA_MODULE
 
     DEFAULT_CONFIG_FILE = 'config.yml'
     DEFAULT_CREDS_FILE = 'creds.yml'
@@ -52,9 +57,13 @@ def init():
 
     #EnableWeb Sockets
     DATABASE = parsed_config['script_options']['DATABASE']
+    TICKER_ITEMS = parsed_config['script_options']['TICKER_ITEMS']
 
     #Back Testing Setting 
     BACKTEST_PLAY = parsed_config['script_options']['BACKTEST_PLAY']
+    BACKTEST_FILE = parsed_config['script_options']['BACKTEST_FILE'] 
+    BACKTEST_RECORD = parsed_config['script_options']['BACKTEST_RECORD'] 
+    MARKET_DATA_INTERVAL = parsed_config['script_options']['MARKET_DATA_INTERVAL'] 
 
     # Load trading vars
     PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
@@ -64,10 +73,8 @@ def init():
     REF_COIN = parsed_config['trading_options']['REF_COIN']
     
 
-    TIME_DIFFERENCE = parsed_config['trading_options']['TIME_DIFFERENCE']
     RECHECK_INTERVAL = parsed_config['trading_options']['RECHECK_INTERVAL']
 
-    CHANGE_IN_PRICE = parsed_config['trading_options']['CHANGE_IN_PRICE']
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
 
@@ -87,9 +94,6 @@ def init():
     SESSION_TAKE_PROFIT = parsed_config['trading_options']['SESSION_TAKE_PROFIT']
     SESSION_STOP_LOSS = parsed_config['trading_options']['SESSION_STOP_LOSS']
 
-    # Borrowed from DJCommie fork
-    # If TRUE, coin will only sell based on an external SELL signal
-    SELL_ON_SIGNAL_ONLY = parsed_config['trading_options']['SELL_ON_SIGNAL_ONLY']
 
     # Discord integration
     # Used to push alerts, messages etc to a discord channel
@@ -108,6 +112,7 @@ def init():
 
     TRADING_FEE = parsed_config['trading_options']['TRADING_FEE']
     SIGNALLING_MODULES = parsed_config['trading_options']['SIGNALLING_MODULES']
+    MARKET_DATA_MODULE = parsed_config['trading_options']['MARKET_DATA_MODULE']
 
     if DEBUG_SETTING or args.debug:
         DEBUG = True

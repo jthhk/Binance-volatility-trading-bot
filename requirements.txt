@@ -31,4 +31,6 @@ redis
 matplotlib
 altair
 streamlit
-matplotlib
+tabulate
+psutil
+pytz
