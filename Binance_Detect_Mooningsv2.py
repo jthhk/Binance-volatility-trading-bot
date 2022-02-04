@@ -390,7 +390,7 @@ def balance_report(EndOfAlgo=False):
 
     global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total,exposure_calcuated
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused
+    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused,feedhandler
 
     #Bot Summary 
     #truncating some of the above values to the correct decimal places before printing
@@ -454,6 +454,7 @@ def balance_report(EndOfAlgo=False):
         print(f'Market Data Feedhandler status: {feedhandler.is_alive}')
         if not feedhandler.is_alive:
             print(f'Market Data Feedhandler restarting....')
+            stop_signal_thread(feedhandler)
             feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
     else:
         print(f'Subprocess running as expected - {AuctualSubProcess} of {ExpectedSubProcess}')
