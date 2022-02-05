@@ -26,15 +26,8 @@ config.yml
 
 logs/* export-ignore
 logs/*/* export-ignore
-logs/20220109_19_23/tickers.txt
-logs/20220109_19_29/tickers.txt
-logs/20220109_20_20/signalsell_tickers.txt
-logs/20220109_20_20/tickers.txt
-logs/20220109_22_56/signalsell_tickers.txt
-logs/20220109_22_56/tickers.txt
-logs/20220109_22_59/signalsell_tickers.txt
-logs/20220109_22_59/tickers.txt
-logs/20220109_23_02/signalsell_tickers.txt
 tickers/tickers.txt
-logs/20220109_23_02/tickers.txt
-tickers/tickers.txt
+
+# Ignore testing
+*1T*.txt
+*OneMin*.txt
