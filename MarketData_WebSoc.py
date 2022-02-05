@@ -257,7 +257,10 @@ def on_error(ws, error):
     elif( "remote host was lost" in str(error) ):
         print ( "Connection to remote host was lost: Network connection is lost or host is not running")
     else:
-        TriggerRestart = False    
+        TriggerRestart = False
+
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - on_error - restarted: {TriggerRestart} - {error}\n')
 
     if TriggerRestart:
         #for recreatng the WebSocket connection 
@@ -354,6 +357,15 @@ def on_message(ws, message):
                         MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
                         MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
+
+                        filename = symbol + '_Oneminute.txt'
+                        with open(filename, 'a') as file:                        
+                            file.write(dataset.to_string()) # use `json.loads` to do the reverse
+                        
+                        filename = symbol + '_' + calc_item + '.txt'
+                        with open(filename, 'a') as file:
+                            file.write(str(MarketDataRec)) # use `json.loads` to do the reverse
+                                                
                 else:
                     closePx = candle["o"]
 

@@ -367,14 +367,20 @@ def update_bot_stats():
         json.dump(bot_stats, file, indent=4)
 
 def update_portfolio():
+    
     # save the coins in a json file in the same directory
     if len(coins_bought.index) > 0:
         coins_bought.to_json(settings.coins_bought_file_path, orient = 'split', compression = 'infer', index = 'true')    
         #print(coins_bought.to_markdown())     
+    else:
+        with open(settings.coins_bought_file_path, 'w') as f:
+            f.write('')
 
     if len(coins_sold.index) > 0:
         coins_sold.to_json(settings.coins_sold_file_path, orient = 'split', compression = 'infer', index = 'true')    
-        #print(coins_sold.to_markdown())     
+    else:
+        with open(settings.coins_sold_file_path, 'w') as f:
+            f.write('')
 
 def write_log(logline):
     timestamp = datetime.now().strftime("%y-%m-%d %H:%M:%S")
@@ -407,6 +413,9 @@ def balance_report(EndOfAlgo=False):
     Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
     market_macd_5min = float(Ref_TA_5m['macd'])  
 
+    Ref_TA_1m = MarketData.hgetall('TA:'+settings.REF_COIN+'1T')
+    market_macd_1min = float(Ref_TA_1m['macd'])  
+
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
     if settings.TEST_MODE:
@@ -434,7 +443,7 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'REFERENCE PRICE :')
     print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT}")
-    print(f"Trending        : {txcolors.SELL_PROFIT if market_macd_5min > 0. else txcolors.SELL_LOSS}{market_macd_5min:.4f} ({settings.REF_COIN} MACD 5m){txcolors.DEFAULT}")
+    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f}")
     print(f'')
     print(f'ALL TIME DATA   :')
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
@@ -450,12 +459,13 @@ def balance_report(EndOfAlgo=False):
         AuctualSubProcess += 1
     if AuctualSubProcess < ExpectedSubProcess: 
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..please check, restart possible via CTRL+C')
-        print(f'External Signals Status: {check_signal_threads()}')
+        External = check_signal_threads()
+        print(f'External Signals Status: {External}')
         print(f'Market Data Feedhandler status: {feedhandler.is_alive}')
-        if not feedhandler.is_alive:
-            print(f'Market Data Feedhandler restarting....')
-            stop_signal_thread(feedhandler)
-            feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+        #if External:
+            #print(f'Market Data Feedhandler restarting....')
+            #stop_signal_thread(feedhandler)
+            #feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
     else:
         print(f'Subprocess running as expected - {AuctualSubProcess} of {ExpectedSubProcess}')
     print(f'--------')
@@ -501,6 +511,7 @@ def CheckForExistingSession():
         if os.path.exists(settings.LOG_FILE):shutil.copy(settings.LOG_FILE, NewFolder)
         if os.path.exists(settings.HISTORY_LOG_FILE):shutil.copy(settings.HISTORY_LOG_FILE, NewFolder)      
         if os.path.exists('config.yml'):shutil.copy('config.yml', NewFolder)     
+        if os.path.exists('WebSocket.txt'):shutil.copy('WebSocket.txt', NewFolder)     
         print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session backed up to logs ...')
 
         #Create folder under logs , copy past session files
@@ -516,6 +527,7 @@ def CheckForExistingSession():
             if os.path.exists(settings.coins_sold_file_path): os.remove(settings.coins_sold_file_path)
             if os.path.exists(settings.LOG_FILE): os.remove(settings.LOG_FILE)
             if os.path.exists(settings.HISTORY_LOG_FILE): os.remove(settings.HISTORY_LOG_FILE)
+            if os.path.exists('WebSocket.txt'):os.remove('WebSocket.txt')     
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session deleted, continuing ...')
         else:
             print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Continuing with the session started ...')
@@ -548,16 +560,15 @@ def sell(symbol,reason):
         Sell_Coins_Details = coins_bought[coins_bought['symbol'] == symbol]
     
     for index, row in Sell_Coins_Details.iterrows():
-        FillQty = FillPx = TotalFillQty = TotalFillCost  = 0
+        orderID = FillQty = FillPx = TotalFillQty = TotalFillCost = FillFee  = 0
         coin = row['symbol']
+        BuyPrice = float(row['avgPrice'])
         data = MarketData.hgetall("L1:"+coin)
         TotalFillQty = float(row['volume'])
-        FillPx = float(data['price'])
+        FillPx = float(data['price']) if float(data['price']) > 0 else BuyPrice
         TotalFillCost = TotalFillQty * FillPx
-        FillFee = 0
-        orderID = 0
         TxnTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        BuyPrice = float(row['avgPrice'])
+
 
         if not settings.TEST_MODE:
             try:
