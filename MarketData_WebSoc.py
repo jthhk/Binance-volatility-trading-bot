@@ -203,7 +203,7 @@ def get_data_frame(symbol):
 
     #get thr 1m
     timeframes = '1m'
-    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=34)
+    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=36)
     df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     df['time'] = pd.to_datetime(df['time'],unit='ms')
     df.set_index('time', inplace=True)
@@ -285,6 +285,8 @@ def on_message(ws, message):
     #TO DO: PING
     ########################################################
     event = json.loads(message)
+    
+    exchange = ccxt.binance()
 
     try:
         eventtype = event['e'] 
@@ -352,20 +354,12 @@ def on_message(ws, message):
                         
                         get_rsi = rsi[-1:][0]
                         get_adx = adx['ADX_14'][len(adx)-1]
-                        get_macd = macd['MACD_12_26_9'][len(macd)-1]
+                        get_macd = macd['MACDh_12_26_9'][len(macd)-1]  #The histogram is positive when MACD is higher than its nine-day EMA, and negative when it is lower.
                         
                         MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
                         MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
 
-                        filename = symbol + '_Oneminute.txt'
-                        with open(filename, 'a') as file:                        
-                            file.write(dataset.to_string()) # use `json.loads` to do the reverse
-                        
-                        filename = symbol + '_' + calc_item + '.txt'
-                        with open(filename, 'a') as file:
-                            file.write(str(MarketDataRec)) # use `json.loads` to do the reverse
-                                                
                 else:
                     closePx = candle["o"]
 

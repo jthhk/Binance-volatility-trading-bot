@@ -98,8 +98,12 @@ def DoCycle():
                     TA_5m = MarketData.hgetall('TA:'+symbol+'5T')
                     TA_15m = MarketData.hgetall('TA:'+symbol+'15T')
 
-                    #MACD crossing above zero is considered bullish, while crossing below zero is bearish.
-                    get_histbtc = float(Bitcoin_TA_1m['macd'])  
+                    #MACD hist crossing above zero is considered bullish, while crossing below zero is bearish.
+                    if len(Bitcoin_TA_1m) > 0:
+                        get_histbtc = float(Bitcoin_TA_1m['macd']) 
+                    else: 
+                        print("ERROR - BTC is missing from Ticker list, please add")
+                        sys.exit(0)
                     macd1m = float(TA_1m['macd'])
                     macd5m = float(TA_5m['macd'])
                     macd15m = float(TA_15m['macd'])
