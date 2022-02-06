@@ -1,4 +1,3 @@
-BTC
 AAVE
 ADA
 ZEN
