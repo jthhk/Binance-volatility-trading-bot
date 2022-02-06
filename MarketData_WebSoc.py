@@ -268,9 +268,8 @@ def on_error(ws, error):
             ws.close = None    
             print ('deleting ws')
             del ws
-
-        #Forcebly set ws to None            
-        ws = None
+            #Forcebly set ws to None            
+            ws = None
 
         count = 0
         print ( "Websocket Client trying  to re-connect" ) 

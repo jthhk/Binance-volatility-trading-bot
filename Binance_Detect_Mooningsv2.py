@@ -484,13 +484,16 @@ def balance_report(EndOfAlgo=False):
     for child in children:
         AuctualSubProcess += 1
     if AuctualSubProcess < ExpectedSubProcess: 
-        print(f'{txcolors.WARNING}Subprocess possibility missing missing..please check, restart possible via CTRL+C')
+        print(f'{txcolors.WARNING}Subprocess possibility missing missing..auto restarting....')
         External = check_signal_threads()
         print(f'External Signals Status: {External}')
         if External:
             print(f'Market Data Feedhandler restarting, please do manually via CTRL+C....')
-            #stop_signal_thread(feedhandler)
-            #feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+            stop_signal_thread(feedhandler)
+            feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+        else:
+            stop_signal_threads()
+            start_signal_threads()
     else:
         print(f'Subprocess running as expected - {AuctualSubProcess} of {ExpectedSubProcess}')
     print(f'--------')
@@ -1016,7 +1019,7 @@ if __name__ == '__main__':
             if CoinsUpdates: update_portfolio()
             if botIscheckingCoins or bot_paused: balance_report()
             update_bot_stats()
-            if not (botIscheckingCoins and bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
+            if not (botIscheckingCoins or bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
             time.sleep(settings.RECHECK_INTERVAL) 
 
         except ReadTimeout as rt:
