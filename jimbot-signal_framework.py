@@ -57,16 +57,11 @@ def DoCycle():
                     if block_info:   
                         print(f'{symbol} Skipping as we already holding \n')
                 else:
-                    # Set your custom Strategy Settings
-                    profit_max = 100  # only required if you want to limit max profit
-                    profit_min = 15
-
-                    # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
-                    percent_below = 0.6  
+                    # change risk level:  0.5 = 50% below high_price-Lowpx (spread)
+                    percent_below = 0.5  
                     
                     # movement can be either:
                     #  "MOVEMENT" for original movement calc
-                    #  "ATR_MOVEMENT" for Average True Range Percentage calc
                     MOVEMENT = 'MOVEMENT'
 
                     #-----------------------------------------------------------------
@@ -79,31 +74,25 @@ def DoCycle():
                     close_price = float(data['close'])
                     #current_bid = float(data['BBPx'])
                     #current_ask = float(data['BAPx'])
-                    potential = float(data['potential'])  # (Low/High)*100
+                    potential = float(data['potential'])  # (session Low/High)*100
 
                     #spread = float(data['spread'])  #ask-Bid
                     #WeightedAvgPrice = float(data['WeightedAvgPrice'])  # ((Askpx * BuyQty) (Bidpx * AskQty)) / (BuyQty+BuyQty)
                     #mid = float(data['mid'])  #Bid-Ask/2
                     #orderBookDemand = data['orderBookDemand']  #BidQty > AskQty = Bull else Bear
 
-                    #TendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
-                    #TendingUp = float(data['TrendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
+                    #TrendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
+                    TrendingUp = float(data['TrendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
                     #TakerCount = float(data['TakerCount'])  #cum vol of Taker trades
                     #MakerCount = float(data['MakerCount'])  #cum vol of marker trades
-                    #MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
+                    MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
                     
                     #Candle data 
-                    Bitcoin_TA_1m = MarketData.hgetall('TA:BTCUSDT1T')
                     TA_1m = MarketData.hgetall('TA:'+symbol+'1T')
                     TA_5m = MarketData.hgetall('TA:'+symbol+'5T')
                     TA_15m = MarketData.hgetall('TA:'+symbol+'15T')
 
                     #MACD hist crossing above zero is considered bullish, while crossing below zero is bearish.
-                    if len(Bitcoin_TA_1m) > 0:
-                        get_histbtc = float(Bitcoin_TA_1m['macd']) 
-                    else: 
-                        print("ERROR - BTC is missing from Ticker list, please add")
-                        sys.exit(0)
                     macd1m = float(TA_1m['macd'])
                     macd5m = float(TA_5m['macd'])
                     macd15m = float(TA_15m['macd'])
@@ -122,44 +111,28 @@ def DoCycle():
                     #75-100	Extremely Strong Trend
                     #------------------------------
                     #adx1m = float(TA_1m['adx'])
-                    #adx5m = float(TA_5m['adx'])
+                    adx5m = float(TA_5m['adx'])
                     #adx15m = float(TA_15m['adx'])
 
                     #Standard Strategy Calcs 
                     #using last Candle lowpx and highpx 
                     range = float(high_price - low_price)
-                    buy_above = float(low_price * 1.00)
                     buy_below = float(high_price - (range * percent_below))
-                    max_potential = float(potential * profit_max)
-                    min_potential = float(potential * profit_min)
                                         
                     #using last Candle highpx and last trade price, if last trade nan then fall back to lowpx or AskPx
                     current_range = float(high_price - last_price)
-                    current_potential = float((last_price / high_price) * 100)
-                    current_buy_above = float(last_price * 1.00)
-                    current_buy_below = float(high_price - (current_range * percent_below))
-                    current_max_potential = float(current_potential * profit_max) 
-                    current_min_potential = float(current_potential * profit_min)
+                    buy_current_below = float(high_price - (current_range * percent_below))
 
-                    if current_range == 0: 
-                        #it is possible to have the samw High/low/last trade resulting in "Cannot divide by zero"
-                        movement = 0
-                    else:
-                        movement = (low_price / current_range)   
+                    #it is possible to have the samw High/low/last trade resulting in "Cannot divide by zero"
+                    movement = (low_price / current_range) if current_range > 0 else 0
 
                     BuyCoin = False
                     #-----------------------------------------------------------------
                     #Do your custom strategy calcs
-                    if current_range == 0: 
-                        #it is possible to have the samw current_range=0 resulting in "Cannot divide by zero"
-                        current_drop = (100 * (current_range)) / high_price
-                    else:
-                        current_drop = 0
 
-                    # average true range
-                    atr = []               
-                    atr.append(high_price-low_price)
-                    atr_percentage = ((sum(atr)/len(atr)) / close_price) * 100
+                    #it is possible to have the same current_range=0 resulting in "Cannot divide by zero"
+                    current_drop = (100 * current_range) / high_price if current_range > 0 else 0
+
                     #-----------------------------------------------------------------
                     #Do your strategy check here
                     #-----------------------------------------------------------------
@@ -167,32 +140,21 @@ def DoCycle():
                     TimeFrameCheck = False 
                     TimeFrameOption = False
 
-                    if get_histbtc >= 0:
-                        #Different MOVEMENT models 
-                        if MOVEMENT == "MOVEMENT":
-                            TimeFrameOption = (movement >= (settings.TAKE_PROFIT + 0.2))
-                        elif MOVEMENT ==  "ATR_MOVEMENT":
-                            TimeFrameOption = (atr_percentage >= settings.TAKE_PROFIT)
-                        else:
-                            TimeFrameOption = True
+                    #Different MOVEMENT models 
+                    TimeFrameOption = (movement >= (settings.TAKE_PROFIT + 0.2)) if MOVEMENT == "MOVEMENT" else True
 
-                        #Main Strategy checker
-                        if TimeFrameOption:
-                            RealTimeCheck = (profit_min < current_potential < profit_max and last_price < buy_below)
-                            if RealTimeCheck:
-                                TimeFrameCheck = (macd1m >= 0 and macd5m  >= 0 and macd15m >= 0)
-                                if TimeFrameCheck:
-                                    BuyCoin = True
-                    else:
-                        if NeedToAlerted:
-                            print (f'{SIGNAL_NAME} : Bitcoin 1m MACD is not good : {get_histbtc}\n')
-                            NeedToAlerted = False
+                    #Main Strategy checker
+                    if TimeFrameOption:
+                        RealTimeCheck = (last_price < buy_below)
+                        if RealTimeCheck:
+                            TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 30 and MarketPressure == 'Bull' and TrendingUp > 3)
+                            if TimeFrameCheck:
+                                BuyCoin = True
 
                     #Custom logging output for generic debug mode below
                     Custom_Fields = (
-                                    "current_drop:" + str(current_drop) + "|" 
-                                    "atr_percentage:" + str(atr_percentage)  + "\n" 
-                                    )
+                                    "current_drop:" + str(current_drop) + "\n" 
+                                   )
 
                     #-----------------------------------------------------------------
                     #Buy coin check
@@ -204,7 +166,7 @@ def DoCycle():
                                 f.write(str(symbol) + '\n')
                                 if settings.DEBUG: print(f'{str(datetime.now())}:{SIGNAL_NAME} - BUY - {symbol} \n')
                         except Exception as e:
-                            sleep(1)
+                            time.sleep(1)
                             continue
 
                     #-----------------------------------------------------------------
@@ -222,20 +184,11 @@ def DoCycle():
                             f'Close:{close_price:.3f}\n'
                             f'\n-----------------Standard Strategy Calcs---------------\n'
                             f'Day Max Range:{range:.3f} |'
-                            f'Buy above:{buy_above:.3f} |'
                             f'Buy Below:{buy_below:.3f} |'
                             f'Potential profit:{potential:.0f} |'
-                            f'Potential max profit:{max_potential:.0f} |'
-                            f'Potential min profit:{min_potential:.0f}  |n'
-                            f'Buy above:{buy_above:.3f} |'
                             f'Buy Below:{buy_below:.3f} \n'
                             f'\n-----------Strategy Calcs based off closed last candle---------\n'
                             f'Day Max Range (lstpx):{current_range:.3f} |'
-                            f'Potential profit(lstpx):{current_potential:.0f} |'
-                            f'Potential max profit:{current_max_potential:.0f} |'
-                            f'Potential min profit:{current_min_potential:.0f} |'
-                            f'Buy above (lstpx):{current_buy_above:.3f} |'
-                            f'Buy Below(lstpx):{current_buy_below:.3f} |'
                             f'Movement:{movement:.2f}\n'
                             f'\n------------Custom calcs-----------------------\n'
                             f'{Custom_Fields}'
@@ -247,8 +200,6 @@ def DoCycle():
                             f'macd5m:{macd5m} |'
                             f'macd15m:{macd15m}\n'
                             )
-                        print ("\n-------Bitcoin--------")
-                        print (f"get_histbtc:   {get_histbtc}")
     
             if block_info:
                 timetaken = time.time() - StartTime

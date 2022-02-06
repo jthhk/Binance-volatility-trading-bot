@@ -98,30 +98,30 @@ def InitializeDataFeed():
 
         sleep_time = 2
         num_retries = 4
-        str_error = ""
+        
         for x in range(0, num_retries): 
-            
-                try:
-                    info = client.get_symbol_info(coin)
-                    step_size = info['filters'][2]['stepSize']
+            str_error = ""          
+            try:
+                info = client.get_symbol_info(coin)
+                step_size = info['filters'][2]['stepSize']
 
-                    MarketDataRec = {'symbol': coin , 'open': -1, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TrendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',   'TrendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
+                MarketDataRec = {'symbol': coin , 'open': -1, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TrendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',   'TrendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
 
-                    MarketData.hmset("L1:"+coin, MarketDataRec)
-                    MarketData.lpush("L1", "L1:"+coin)
+                MarketData.hmset("L1:"+coin, MarketDataRec)
+                MarketData.lpush("L1", "L1:"+coin)
 
-                    get_data_frame(coin)  #Needs to move out
-                    coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
-                    current_ticker_list.extend(coinlist)
-                    CoinsCounter += 1
-                except Exception as str_error:
-                    pass
-                if str_error:
-                    print(f'ERROR - {str_error} - sleeping for {sleep_time}' )
-                    time.sleep(sleep_time)  # wait before trying to fetch the data again
-                    sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
-                else:
-                    break
+                get_data_frame(coin)  #Needs to move out
+                coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
+                current_ticker_list.extend(coinlist)
+                CoinsCounter += 1
+            except Exception as str_error:
+                pass
+            if str_error:
+                print(f'ERROR - {str_error} - sleeping for {sleep_time}' )
+                time.sleep(sleep_time)  # wait before trying to fetch the data again
+                sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
+            else:
+                break
 
     print(f'{str(datetime.now())}: Total Coins: {CoinsCounter}')
 
@@ -308,8 +308,10 @@ def on_message(ws, message):
             if interval == "1m":
                 #1min/called standard - IF STATEMENT FOR FUTURE EXPANSION 
                 LastPx = MarketData.hget("L1:" + symbol,'price')
+                OneMinDataSet = list_of_coins[symbol + '_1T'] 
+                FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
+
                 if is_candle_closed:
-                    potential = (float(candle["l"]) / float(candle["h"])) * 100
 
                     #Get Last closed Candle data and prep in dataframe
                     closeminutes = int(datetime.utcfromtimestamp(candle["T"]/1000).strftime('%M'))
@@ -320,7 +322,6 @@ def on_message(ws, message):
                     LastCandle.set_index('time', inplace=True)
 
                     #Sliding Window: append latest candle onto my history, cap using Len()-1,  save it for the next recalc 
-                    OneMinDataSet = list_of_coins[symbol + '_1T'] 
                     OneMinDataSet = OneMinDataSet.tail(len(OneMinDataSet)-1)
                     OneMinDataSet = pd.concat([OneMinDataSet,LastCandle])
                     list_of_coins[symbol + '_1T'] = OneMinDataSet
@@ -336,7 +337,7 @@ def on_message(ws, message):
                         LastFiveCandle = OneMinDataSet.tail(5) 
                         LastFiveCandle = LastFiveCandle.resample('5T').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
                         LastFiveCandle - LastFiveCandle.tail(1)
-                        FiveMinDataSet = list_of_coins[symbol + '_' + '5T'] 
+                        
                         FiveMinDataSet = FiveMinDataSet.tail(len(FiveMinDataSet)-1)
                         FiveMinDataSet = pd.concat([FiveMinDataSet,LastFiveCandle])
                         list_of_coins[symbol + '_' + '5T'] = FiveMinDataSet
@@ -353,20 +354,30 @@ def on_message(ws, message):
                         macd = dataset.ta.macd(fast=12, slow=26)
                         
                         get_rsi = rsi[-1:][0]
-                        get_adx = adx['ADX_14'][len(adx)-1]
+                        get_adx = adx['ADX_14'][len(adx)-1] #measure here is the direction/trend of the asset. It is represented using,
                         get_macd = macd['MACDh_12_26_9'][len(macd)-1]  #The histogram is positive when MACD is higher than its nine-day EMA, and negative when it is lower.
                         
                         MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
                         MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
+                        highpx =  candle["h"]
+                        lowpx = candle["l"]
 
                 else:
                     closePx = candle["o"]
 
+                #session High/low using 1m and 5m combined                 
+                SixMinDataSet = pd.concat([OneMinDataSet,FiveMinDataSet])
+                column = SixMinDataSet["high"]
+                highpx = column.max()
+                column = SixMinDataSet["low"]
+                lowpx = column.min()
+                potential = (float(lowpx) / float(highpx)) * 100
+
                 if float(LastPx) == -1:
                     LastPx = closePx
                 
-                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
+                MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
                 #data = MarketData.hgetall("L1:" + symbol)
 
@@ -383,13 +394,10 @@ def on_message(ws, message):
 
             if event["p"] < LastPx:
                 TrendingDown+= 1
+                TrendingUp= 0
             else:
+                TrendingUp+= 1                
                 TrendingDown = 0
-
-            if event["p"] > LastPx:
-                TrendingUp+= 1
-            else:
-                TrendingUp = 0
 
             #markers and takers 
             is_market_maker = event["m"]

@@ -133,6 +133,8 @@ class txcolors:
     UNDERLINE = '\033[4m'
     ENDC = '\033[0m'
 
+txcolors = txcolors()
+
 # print with timestamps
 old_out = sys.stdout
 class St_ampe_dOut:
@@ -328,6 +330,17 @@ def sell_external_signals():
 
     return external_list
 
+def pause_external_signals():
+    signals = {}
+    paused = False 
+
+    # check directory and load pairs from files into external_list
+    signals = glob.glob("signals/*.pause")
+    for filename in signals:
+        paused = True 
+
+    return paused
+
 ##########################################################
 #discord
 #########################################################
@@ -396,7 +409,7 @@ def balance_report(EndOfAlgo=False):
 
     global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total,exposure_calcuated
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused,feedhandler
+    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused,feedhandler,ExternalPaused
 
     #Bot Summary 
     #truncating some of the above values to the correct decimal places before printing
@@ -406,15 +419,22 @@ def balance_report(EndOfAlgo=False):
     if (trade_wins > 0) and (trade_losses == 0):
         WIN_LOSS_PERCENT = 100
 
-    data = MarketData.hgetall("L1:"+settings.REF_COIN)   
-    market_currprice = float(data['price'])  
-    market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
+    try:
+        data = MarketData.hgetall("L1:"+settings.REF_COIN)   
+        market_currprice = float(data['price'])  
+        market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
-    Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
-    market_macd_5min = float(Ref_TA_5m['macd'])  
+        Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
+        market_macd_5min = float(Ref_TA_5m['macd'])  
 
-    Ref_TA_1m = MarketData.hgetall('TA:'+settings.REF_COIN+'1T')
-    market_macd_1min = float(Ref_TA_1m['macd'])  
+        Ref_TA_1m = MarketData.hgetall('TA:'+settings.REF_COIN+'1T')
+        market_macd_1min = float(Ref_TA_1m['macd'])  
+    except Exception as e:
+        #Bot not ready, loading data
+        market_macd_1min = -999
+        market_macd_5min = -999
+        market_currprice = -999
+        market_profit = -999
 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
@@ -434,7 +454,13 @@ def balance_report(EndOfAlgo=False):
     print(f'BACKTESTER      : {settings.BACKTEST_PLAY}')
     print(f'Buying Paused   : {bot_paused}')
     if bot_paused:
-        print(f'{txcolors.WARNING}Purchase is paused, stop loss and take profit will continue to work...')
+        if ExternalPaused:
+            if market_currprice == -999:
+                print(f'{txcolors.WARNING}Bot is paused until market data is ready, please wait....')
+            else:
+                print(f'{txcolors.WARNING}Bot is paused by external signals, stop loss and take profit will continue to work...')                            
+        else:
+            print(f'{txcolors.WARNING}Bot is paused manually, stop loss and take profit will continue to work...')
     print(f'')
     print(f'SESSION PROFIT (Inc Fees)')
     print(f'Realised        : {txcolors.SELL_PROFIT if session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
@@ -461,9 +487,8 @@ def balance_report(EndOfAlgo=False):
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..please check, restart possible via CTRL+C')
         External = check_signal_threads()
         print(f'External Signals Status: {External}')
-        print(f'Market Data Feedhandler status: {feedhandler.is_alive}')
-        #if External:
-            #print(f'Market Data Feedhandler restarting....')
+        if External:
+            print(f'Market Data Feedhandler restarting, please do manually via CTRL+C....')
             #stop_signal_thread(feedhandler)
             #feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
     else:
@@ -798,7 +823,7 @@ if __name__ == '__main__':
 
     global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total,bot_paused
     global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
-    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated,feedhandler
+    global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated,feedhandler,ExternalPaused
 
     historic_profit_incfees_perc = historic_profit_incfees_total = 0
     trade_wins=trade_losses=market_startprice=unrealised_session_profit_incfees_total=unrealised_session_profit_incfees_perc = 0
@@ -868,13 +893,13 @@ if __name__ == '__main__':
     while is_bot_running:
         try:
             CoinsUpdates = False
-
-            if  not (os.path.exists("signals/pausebot.pause") or bot_manual_pause):
+            ExternalPaused = pause_external_signals()
+            if  not (ExternalPaused or bot_manual_pause):
             #only if Bot is NOT paused 		
                 #if settings.REINVEST_PROFITS:
                 #     settings.Reinvest_profits(total_capital)
                 bot_paused = False
-
+                
                 externals = buy_external_signals()
                 for excoin in externals:
                     CoinAlreadyBought = coins_bought[coins_bought['symbol'].str.contains(excoin)]
@@ -889,6 +914,7 @@ if __name__ == '__main__':
             else:
             #Bot is paused 
                 remove_external_signals('buy')
+                remove_external_signals('sell')
                 if bot_manual_pause:
                     msg = str(datetime.now()) + ' | PAUSEBOT.Purchase paused manually, stop loss and take profit will continue to work...'
                 else:
@@ -988,8 +1014,9 @@ if __name__ == '__main__':
 
             #Publish updates to files and screen
             if CoinsUpdates: update_portfolio()
-            if botIscheckingCoins: balance_report()
+            if botIscheckingCoins or bot_paused: balance_report()
             update_bot_stats()
+            if (botIscheckingCoins and bot_paused and market_startprice ==0): print("Scanning no good coins found yet...")
             time.sleep(settings.RECHECK_INTERVAL) 
 
         except ReadTimeout as rt:

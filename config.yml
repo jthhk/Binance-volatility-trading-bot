@@ -130,7 +130,7 @@ trading_options:
     # - os_pausebot_MAv2
     # - scoobie_signalbuy_thesnailv3
     # - the_snail_v2 
-    # - btc_pause
+    # - jimbot_pause
       - jimbot-signal_framework
 
     
