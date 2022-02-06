@@ -100,7 +100,6 @@ def InitializeDataFeed():
         num_retries = 4
         
         for x in range(0, num_retries): 
-            str_error = ""          
             try:
                 info = client.get_symbol_info(coin)
                 step_size = info['filters'][2]['stepSize']
@@ -115,9 +114,7 @@ def InitializeDataFeed():
                 current_ticker_list.extend(coinlist)
                 CoinsCounter += 1
             except Exception as str_error:
-                pass
-            if str_error:
-                print(f'ERROR - {str_error} - sleeping for {sleep_time}' )
+                print(f'Warning - {str_error} - sleeping for {sleep_time}' )
                 time.sleep(sleep_time)  # wait before trying to fetch the data again
                 sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
             else:
@@ -506,4 +503,4 @@ def do_work():
         with open('WebSocket.txt','a+') as f:
             f.write(f'{time.strftime("%Y-%m-%d %H:%M")} |Exception do_work|{e}\n')
     except KeyboardInterrupt:
-        print(f'{txcolors.WARNING}Market data feedhandler exixting - do_work.')
+        print(f'{txcolors.WARNING}Market data feedhandler exiting - do_work.')
