@@ -124,7 +124,7 @@ def DoCycle():
                     buy_current_below = float(high_price - (current_range * percent_below))
 
                     #it is possible to have the samw High/low/last trade resulting in "Cannot divide by zero"
-                    movement = (low_price / current_range) if current_range > 0 else 0
+                    movement = (current_range/high_price) * 100 if current_range > 0 else 0
 
                     BuyCoin = False
                     #-----------------------------------------------------------------
@@ -141,7 +141,7 @@ def DoCycle():
                     TimeFrameOption = False
 
                     #Different MOVEMENT models 
-                    TimeFrameOption = (movement >= (settings.TAKE_PROFIT + 0.2)) if MOVEMENT == "MOVEMENT" else True
+                    TimeFrameOption = (movement >= (settings.TAKE_PROFIT)) if MOVEMENT == "MOVEMENT" else True
 
                     #Main Strategy checker
                     if TimeFrameOption:

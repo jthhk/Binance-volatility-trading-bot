@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
             if CoinsUpdates: update_portfolio()
             if botIscheckingCoins or bot_paused: balance_report()
             update_bot_stats()
-            if (botIscheckingCoins and bot_paused and market_startprice ==0): print("Scanning no good coins found yet...")
+            if not (botIscheckingCoins and bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
             time.sleep(settings.RECHECK_INTERVAL) 
 
         except ReadTimeout as rt:
