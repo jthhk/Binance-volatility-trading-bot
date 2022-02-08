@@ -10,29 +10,51 @@ THIS FORK HAS BEEN BEEN MODIFIED RUN AT YOUR OWN RISK
 i have removed all the files under root into folders - just trying to reduce noise 
 
 ## Jim Bot 
+```
+jthhk/Binance-volatility-trading-bot (forked from Olorin Sledge Fork)
+Version: 0.5
 
-- Added new menu option (5) to pause buy manualy
-- New prompt on start up asking to use existing files or start new session
-- back up  files to /logs/Date_Time folders
-- Add fields to the bot stats for BVT_GUI
-- Add Websocket signal support
-- Add menu (6) to Send OCO and Exit
-- moved this to WebSockets (requires marketData_WebSoc signal + config WEBSOCKET = True)
-- added support to record and replay marketd data by marketData_WebSoc  (BACKTEST_PLAY: True and/or BACKTEST_RECORD True)
-- added support to replay canned/recorded marketd data from file  (BACKTEST_PLAY: True)
-- Added a number of new data fields to  marketData_WebSoc, for use in jimbot-signal_framework (see jimbot-signal_framework for details)
-- Adjusted the Trailing stop lose/profit logic 
-- moved from lists to dataframes - addeding coings_sold
-- rewrote the bot to reduce looping
-- moved config reading to generic settings.XXXXXX
+Binance_Detect_Mooningsv2 logic
+==============================
 
+Checks for existing bot files backs them up, asks to use them or remove
+ ../logs/YYYYMMDD_HH_MM_SS
+Uses 2 dataframes coins_bought and coins_sold while bot is runing 
+
+Starts the market data feed (redis database + snapshot 5m + websockets) in sub process 
+  MarketData_WebSoc.py
+Starts the external signals (also re-wrote to use market data from redis database)
+  jimbot-signal_framework 
+
+for each coin in the ticker list 
+	Skip if coin does not have marketdata (not -1)
+	Calc Take Profit and Stop Loss 
+	Trailing stop loss/take profit re-adjustment (lock in profits)
+	Check if bot should sell SINGLE coin and sell if coin Profit/loss met 
+        Check if bot should sell ALL coins if session Profit/loss met 
+
+Update the Bot portfolio json files (coins_bought / coins_sold )
+Display the balance report to screen 
+Update the Bot overall stats 
+Check Sub processes are running, if market data a problem auto restart 
+
+CTRL+C
+==============================
+[1] Exit (default option)
+[2] Sell All Coins
+[3] Sell A Specific Coin
+[4] Resume Bot
+[5] Stop Purchases (or start)
+[6] OCO All Coins
+[7] Stop Market Data Socket (or start)
+==============================
+
+```
 # Binance Volitility Trading Bot
 
 ## Description
 This Binance trading bot analyses the changes in price across all coins on Binance and place trades on the most volatile ones. 
 In addition to that, this Binance trading algorithm will also keep track of all the coins bought and sell them according to your specified Stop Loss and Take Profit.
-
-
 
 The bot will listen to changes in price accross all coins on Binance. By default, we're only picking USDT pairs. We're excluding Margin (like BTCDOWNUSDT) and Fiat pairs
 
