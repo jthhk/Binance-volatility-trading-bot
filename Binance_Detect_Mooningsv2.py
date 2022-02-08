@@ -491,6 +491,7 @@ def balance_report(EndOfAlgo=False):
             print(f'Market Data Feedhandler restarting, please do manually via CTRL+C....')
             stop_signal_thread(feedhandler)
             feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
+            time.sleep(60)
         else:
             stop_signal_threads()
             start_signal_threads()
@@ -779,6 +780,8 @@ def menu():
             print_notimestamp('\n')
             sell('ALL','Sell All Coins menu option chosen!')
             print_notimestamp('\n')
+            print(f'Bot terminated, end of bot report...')
+            balance_report(True)
             END = True
             LOOP = False            
         elif menuoption == "3":

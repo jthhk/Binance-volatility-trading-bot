@@ -254,7 +254,7 @@ def on_error(ws, error):
     elif( "remote host was lost" in str(error) ):
         print ( "Connection to remote host was lost: Network connection is lost or host is not running")
     else:
-        TriggerRestart = False
+        TriggerRestart = True
 
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - on_error - restarted: {TriggerRestart} - {error}\n')

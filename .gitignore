@@ -31,3 +31,4 @@ tickers/tickers.txt
 # Ignore testing
 *1T*.txt
 *OneMin*.txt
+web*.txt 
