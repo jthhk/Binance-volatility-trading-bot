@@ -513,12 +513,14 @@ def balance_report(EndOfAlgo=False):
         #write out every time
         if not os.path.exists(settings.HISTORY_LOG_FILE):
             with open(settings.HISTORY_LOG_FILE,'a+') as f:
-                f.write('Datetime\tCoins Holding\tTrade Slots\tPausebot Active\tSession Profit %\tSession Profit $\tSession Profit Unrealised %\tSession Profit Unrealised $\tSession Profit Total %\tSession Profit Total $\tAll Time Profit %\tAll Time Profit $\tTotal Trades\tWon Trades\tLost Trades\tWin Loss Ratio\n')    
+                f.write(f'{datetime.now().strftime("%H:%M")}\t{len(coins_bought)}\t{settings.TRADE_SLOTS}\t{str(bot_paused)}\t{session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f}\t{unrealised_session_profit_incfees_perc:.4f}%\t{market_profit:.4f}%\t{trade_wins}\t{trade_losses}\n')                
 
-        #with open(settings.HISTORY_LOG_FILE,'a+') as f:
-            #f.write(f'{timestamp}\t{len(coins_bought)}\t{TRADE_SLOTS}\t{str(bot_paused)}\t{str(round(sess_profit_perc,2))}\t{str(round(sess_profit,4))}\t{str(round(sess_profit_perc_unreal,2))}\t{str(round(sess_profit_unreal,4))}\t{str(round(sess_profit_perc_total,2))}\t{str(round(sess_profit_total,4))}\t{str(round(alltime_profit_perc,2))}\t{str(round(alltime_profit,4))}\t{str(total_trades)}\t{str(won_trades)}\t{str(lost_trades)}\t{str(winloss_ratio)}\n')
-
-
+    CurrentMinutes = int(datetime.now().strftime('%M'))
+    CurrentSecond = int(datetime.now().strftime('%S'))
+    if (CurrentMinutes % 5 == 0) & (CurrentSecond < 1): 
+        msg_discord('Pausebot Active\tPROFIT\t%\tREFERENCE\twins\tlosses\n')
+        msg_discord(f'{str(bot_paused)}\t{session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f}\t{unrealised_session_profit_incfees_perc:.4f}%\t{market_profit:.4f}%\t{trade_wins}\t{trade_losses}\n')
+        msg_discord('---')
 
 ###############################################################
 # Bot Session Mgt
