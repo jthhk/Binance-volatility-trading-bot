@@ -483,7 +483,7 @@ def balance_report(EndOfAlgo=False):
     ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
     for child in children:
         AuctualSubProcess += 1
-    if AuctualSubProcess < ExpectedSubProcess: 
+    if (AuctualSubProcess < ExpectedSubProcess) and not EndOfAlgo: 
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..auto restarting....')
         External = check_signal_threads()
         print(f'External Signals Status: {External}')
@@ -517,9 +517,9 @@ def balance_report(EndOfAlgo=False):
 
     CurrentMinutes = int(datetime.now().strftime('%M'))
     CurrentSecond = int(datetime.now().strftime('%S'))
-    if (CurrentMinutes % 5 == 0) & (CurrentSecond < 1): 
-        msg_discord('Pausebot Active\tPROFIT\t%\tREFERENCE\twins\tlosses\n')
-        msg_discord(f'{str(bot_paused)}\t{session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f}\t{unrealised_session_profit_incfees_perc:.4f}%\t{market_profit:.4f}%\t{trade_wins}\t{trade_losses}\n')
+    if (CurrentMinutes % 5 == 0) & (CurrentSecond < 2): 
+        msg_discord('Pause\tPROFIT\tWins\tHeld\n')
+        msg_discord(f'{str(bot_paused)}\t{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc):.4f}%\t{trade_wins}v{trade_losses}\t{len(coins_bought)}v{settings.TRADE_SLOTS}\n')
         msg_discord('---')
 
 ###############################################################
@@ -634,15 +634,14 @@ def sell(symbol,reason):
         SellPrice = float( TotalFillCost / TotalFillQty)
         sellFee = (SellPrice * (settings.TRADING_FEE/100))
         SellPriceWithFees = SellPrice + sellFee
-
        
         buyFee = (BuyPrice * (settings.TRADING_FEE/100))
-        BuyPricePlusFees = BuyPrice + buyFee
+        BuyPriceWithFees = BuyPrice + buyFee
 
-        ProfitAfterFees = (SellPriceWithFees - BuyPricePlusFees) * row['volume']
-        ProfitAfterFees_Perc = float(((BuyPricePlusFees - SellPriceWithFees) / BuyPricePlusFees) * 100)
+        ProfitAfterFees = (SellPriceWithFees - BuyPriceWithFees) * row['volume']
+        ProfitAfterFees_Perc = float(((SellPriceWithFees - BuyPriceWithFees) / BuyPriceWithFees) * 100)
 
-        if (SellPriceWithFees) >= (BuyPricePlusFees):
+        if (SellPriceWithFees) >= (BuyPriceWithFees):
             trade_wins += 1
         else:
             trade_losses += 1
@@ -680,7 +679,7 @@ def buy(symbol):
     
     global coins_bought
     coin = MarketData.hgetall("L1:"+symbol)
-    if len(coin) > 1 and bool(coin['updated']):
+    if len(coin) > 1 and bool(coin['updated'] and float(coin['price']) > 0):
         #Calc Trading Vol
         lot_size = float(coin['step_size'])
         volume = float(settings.TRADE_TOTAL / float(coin['price']))
@@ -769,7 +768,8 @@ def menu():
         if feedhandler.is_alive: 
             print_notimestamp(f'\n[7] Stop Market Data Socket')
         else:
-            print_notimestamp(f'\n[7] Start Market Data Socket')               
+            print_notimestamp(f'\n[7] Start Market Data Socket')   
+        print_notimestamp(f'\n[8] Sold Coin Report')            
         print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
         menuoption = input()
 
@@ -819,6 +819,12 @@ def menu():
                 feedhandler.is_alive = False
             else:
                 feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
+        elif menuoption == "8":
+            if len(coins_sold.index) > 0:
+                print(f'---Sold----')
+                print_notimestamp(coins_sold.to_markdown())
+                print_notimestamp('\n')
+            
 
     return END
 
@@ -928,7 +934,7 @@ if __name__ == '__main__':
                 else:
                     msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
                 bot_paused = True
-                msg_discord(msg)
+                #msg_discord(msg)
 
             #Check every cycle/reset values 
             exposure_calcuated = 0  
@@ -952,6 +958,7 @@ if __name__ == '__main__':
                     sellFee = (SellPrice * (settings.TRADING_FEE/100))
                     sellFeeTotal = (row['volume'] * SellPrice) * (settings.TRADING_FEE/100)
                     SellPriceWithFees = SellPrice + sellFee
+
 
                     BuyPrice = float(row['avgPrice'])
                     buyFee = (BuyPrice * (settings.TRADING_FEE/100))
@@ -983,16 +990,22 @@ if __name__ == '__main__':
                     # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
                     if SellPriceWithFees < SL: 
                         if settings.USE_TRAILING_STOP_LOSS:
-                            sell_reason = "TSL " + str(SL) + " reached"
+                            if row['stop_loss'] > settings.STOP_LOSS:
+                                sell_reason = "Adj-TSL: " + str(SL) + " reached"
+                            else:
+                                sell_reason = "TSL: " + str(SL) + " reached"
                         else:
-                            sell_reason = "SL " + str(SL) + " reached"
+                            sell_reason = "SL: " + str(SL) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
-                            sell_reason = "TTP " + str(TP) + " reached"
+                            if row['take_profit'] > settings.TAKE_PROFIT:
+                                sell_reason = "Adj-TTP: " + str(TP) + " reached"
+                            else:
+                                sell_reason = "TTP: " + str(TP) + " reached"
                         else:
-                            sell_reason = "TP " + str(TP) + " reached"
+                            sell_reason = "TP: " + str(TP) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
  

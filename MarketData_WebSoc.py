@@ -254,7 +254,7 @@ def on_error(ws, error):
     elif( "remote host was lost" in str(error) ):
         print ( "Connection to remote host was lost: Network connection is lost or host is not running")
     else:
-        TriggerRestart = True
+        TriggerRestart = False
 
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - on_error - restarted: {TriggerRestart} - {error}\n')
@@ -266,7 +266,7 @@ def on_error(ws, error):
             ws.on_message = None
             ws.on_open = None
             ws.close = None    
-            print ('deleting ws')
+            print ('deleting ws - ' + str(error))
             del ws
             #Forcebly set ws to None            
             ws = None
@@ -280,18 +280,19 @@ def on_message(ws, message):
     #Handles each event sent and puts it into the correct dataframe (MarketData)
     #TO DO: PING
     ########################################################
-    event = json.loads(message)
-    
-    exchange = ccxt.binance()
-
     try:
-        eventtype = event['e'] 
-    except:
-        eventtype = "BookTicker"
-    
-    if DEBUG : print(f"{eventtype} event")
+        event = json.loads(message)
+        
+        exchange = ccxt.binance()
 
-    try:
+        try:
+            eventtype = event['e'] 
+        except:
+            eventtype = "BookTicker"
+        
+        if DEBUG : print(f"{eventtype} event")
+
+
         if eventtype == "kline":
             candle=event['k']
             #Need to check Candle is closed 
@@ -460,7 +461,8 @@ def on_message(ws, message):
                 output_file.write(message + '\n')
            
     except KeyboardInterrupt as ki:
-        print(f'{txcolors.WARNING}Market data feedhandler exixting - on_message.')
+        pass
+        #print(f'{txcolors.WARNING}Market data feedhandler exixting - on_message.')
         #sys.exit(0)    
 
 #############################END OF WEB SOCKET###########################################

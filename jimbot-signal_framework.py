@@ -1,10 +1,8 @@
 import time
-from datetime import date, datetime
+from datetime import datetime
 
 import sys
 import os
-
-import json
 
 #redis
 import redis
@@ -31,7 +29,6 @@ def DoCycle():
     CoinsBuyCounter = 0
     Custom_Fields = ""
     StartTime = time.time()
-    NeedToAlerted = True
 
     #Get Held coins so we don't but 2 of the same
     held_coins_list = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss'])
@@ -121,7 +118,7 @@ def DoCycle():
                                         
                     #using last Candle highpx and last trade price, if last trade nan then fall back to lowpx or AskPx
                     current_range = float(high_price - last_price)
-                    buy_current_below = float(high_price - (current_range * percent_below))
+                    #buy_current_below = float(high_price - (current_range * percent_below))
 
                     #it is possible to have the samw High/low/last trade resulting in "Cannot divide by zero"
                     movement = (current_range/high_price) * 100 if current_range > 0 else 0
@@ -168,7 +165,6 @@ def DoCycle():
                         except Exception as e:
                             time.sleep(1)
                             continue
-
                     #-----------------------------------------------------------------
                     #Debug Output
                     #may change this to output to a file

@@ -70,7 +70,7 @@ trading_options:
   STOP_LOSS: -1.9
 
   # define in % when to take profit on a profitable coin.
-  TAKE_PROFIT: 1.9
+  TAKE_PROFIT: 1.0
 
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
@@ -102,7 +102,7 @@ trading_options:
 
   # Discord integration
   # Used to push alerts, messages etc to a discord channel
-  MSG_DISCORD: False
+  MSG_DISCORD: True
   
   REINVEST_PROFITS: False
 
@@ -122,16 +122,8 @@ trading_options:
     # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
-    # - scoobie_signalbuy_thesnailv2
-    # - VolScan
-    # - os_signalbuy_RECOMM
-    # - os_signalsell_RECOMM
-    # - os_signalbuy_3SMAv2
-    # - os_pausebot_MAv2
-    # - scoobie_signalbuy_thesnailv3
-    # - the_snail_v2 
-    # - jimbot_pause
-      - jimbot-signal_framework
+    # - jimbot-signal_framework
+      - scalper
 
     
   
