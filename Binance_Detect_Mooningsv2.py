@@ -423,6 +423,7 @@ def balance_report(EndOfAlgo=False):
         data = MarketData.hgetall("L1:"+settings.REF_COIN)   
         market_currprice = float(data['price'])  
         market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
+        TrendingDown = float(data['TrendingDown'])
 
         Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
         market_macd_5min = float(Ref_TA_5m['macd'])  
@@ -435,6 +436,7 @@ def balance_report(EndOfAlgo=False):
         market_macd_5min = -999
         market_currprice = -999
         market_profit = -999
+        TrendingDown = -999
 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
@@ -469,7 +471,7 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'REFERENCE PRICE :')
     print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT}")
-    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f}")
+    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | TrendDown={TrendingDown}")
     print(f'')
     print(f'ALL TIME DATA   :')
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
@@ -943,8 +945,8 @@ if __name__ == '__main__':
             botIscheckingCoins = False
 
             #Check i have a prices, it may take a few seconds at the start 
+            refpx = MarketData.hgetall("L1:"+settings.REF_COIN)   
             if market_startprice <= 0:
-                refpx = MarketData.hgetall("L1:"+settings.REF_COIN)   
                 if refpx: market_startprice = float(refpx['price'])  
 
             for index, row in coins_bought.iterrows():
@@ -1015,14 +1017,20 @@ if __name__ == '__main__':
 
                     #Check History + Session stats
                     allsession_profits_perc = session_profit_incfees_perc +  ((unrealised_session_profit_incfees_total / settings.total_capital_config) * 100)
+                    market_currprice = float(refpx['price'])
+                    market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
                     if settings.SESSION_TPSL_OVERRIDE:
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT): 
                             sell_reason = "STP Override:" + str(settings.SESSION_TAKE_PROFIT) + f"% |profit:{allsession_profits_perc}%"
                             is_bot_running = False
-                        if allsession_profits_perc <= float(settings.SESSION_STOP_LOSS):
+                        elif allsession_profits_perc <= float(settings.SESSION_STOP_LOSS):
                             sell_reason = "SSL Override:" + str(settings.SESSION_STOP_LOSS) + f"% |loss:{allsession_profits_perc}%"
                             is_bot_running = False
+                        elif ((session_profit_incfees_perc + unrealised_session_profit_incfees_perc) <= (float(settings.SESSION_STOP_LOSS)/2) and (market_profit < -0.7)):
+                            sell_reason = "Kill Switch:" + str(float(settings.SESSION_STOP_LOSS)/2) + f"% |loss:{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc)}%|" + str(market_profit)
+                            is_bot_running = False
+                            
  
                         if not is_bot_running:
                             unrealised_session_profit_incfees_total = 0

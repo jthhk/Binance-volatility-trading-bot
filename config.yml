@@ -67,10 +67,10 @@ trading_options:
   RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -1.9
+  STOP_LOSS: -100 #-1.9
 
   # define in % when to take profit on a profitable coin.
-  TAKE_PROFIT: 1.0
+  TAKE_PROFIT: 1 #1.0
 
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
@@ -85,7 +85,7 @@ trading_options:
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
   TRAILING_STOP_LOSS: -0.2
-  TRAILING_TAKE_PROFIT: 0.6
+  TRAILING_TAKE_PROFIT: 0.5
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
   # when hit SESSION_TAKE_PROFIT %, sell all coins and stop bot
@@ -124,6 +124,7 @@ trading_options:
     #
     # - jimbot-signal_framework
       - scalper
+      - jimbot_pause
 
     
   

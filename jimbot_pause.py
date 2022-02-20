@@ -30,6 +30,18 @@ def analyse_btc():
         print(f'{SIGNAL_NAME}: Market not looking good - BitCoin 1m MACD is -ve =' + str(histbtc))
         paused = True
 
+    data = MarketData.hgetall('L1:BTCUSDT')
+    if len(data) > 0:
+        TrendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
+    else:
+        TrendingDown = 0
+
+    if TrendingDown > 10:
+        print(f'{SIGNAL_NAME}: Market not looking good - BitCoin is trending down :' + str(TrendingDown))
+        paused = True
+
+
+
     #if 0 <= now.weekday() <= 4:
     return paused
 

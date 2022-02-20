@@ -59,19 +59,22 @@ def analyze(pairs):
             #print (f'Coin: {symbol}')
             continue
 
-        SMA10_1MIN = round(analysis1MIN.indicators['SMA10'],4)            
-        SMA20_1MIN = round(analysis1MIN.indicators['SMA20'],4)
-        SMA200_1MIN = round(analysis1MIN.indicators['SMA200'],4)
+        #SMA10_1MIN = round(analysis1MIN.indicators['SMA10'],4)            
+        #SMA20_1MIN = round(analysis1MIN.indicators['SMA20'],4)
+        #SMA200_1MIN = round(analysis1MIN.indicators['SMA200'],4)
+
+        RecommOSC = analysis1MIN.oscillators["RECOMMENDATION"]
+        RecommMACD = analysis1MIN.moving_averages["RECOMMENDATION"]
+        #RecommSummary = analysis1MIN.summary["RECOMMENDATION"]
+
         BuyCoin = False
 
         # Buy condition on the 1 minute indicator
-        if (SMA10_1MIN > SMA20_1MIN) and (SMA20_1MIN > SMA200_1MIN):
-            Recomm = analysis1MIN.summary["RECOMMENDATION"]
-            if Recomm == "BUY" or Recomm == "STRONG_BUY":
-                #print(symbol)
-                #print(analysis1MIN.summary)
-                #print(analysis1MIN.indicators)
-                BuyCoin = True
+        if (RecommMACD == "BUY" or RecommMACD == "STRONG_BUY") and (RecommOSC == "BUY" or RecommOSC == "STRONG_BUY"):
+            #print(symbol)
+            #print(analysis1MIN.summary)
+            #print(analysis1MIN.indicators)
+            BuyCoin = True
 
         #-----------------------------------------------------------------
         #Buy coin check
@@ -84,7 +87,6 @@ def analyze(pairs):
                 
 
 #if __name__ == '__main__':	
-
 def do_work():
     
     while True:
@@ -101,7 +103,7 @@ def do_work():
             for line in open(TICKERS):
                 pairs=[line.strip() + PAIR_WITH for line in open(TICKERS)] 
 
-            print(f'{SIGNAL_NAME}: Analyzing {len(pairs)} coins')
+            #print(f'{SIGNAL_NAME}: Analyzing {len(pairs)} coins')
             signal_coins = analyze(pairs)
             time.sleep((TIME_TO_WAIT*60))
         
