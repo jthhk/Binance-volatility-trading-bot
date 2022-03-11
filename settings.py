@@ -27,7 +27,7 @@ def Reinvest_profits(total_capital):
 
 def init():
 
-    global AMERICAN_USER,access_key, secret_key,DATABASE,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE
+    global AMERICAN_USER,access_key, secret_key,DATABASE,WEBSOCKET,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE
     global SIGNALLING_MODULES,TEST_MODE,REINVEST_PROFITS,TRADE_TOTAL,TRADE_SLOTS,SESSION_STOP_LOSS,TRADING_FEE,SELL_ON_SIGNAL_ONLY
     global USE_TRAILING_STOP_LOSS,SESSION_TPSL_OVERRIDE, DEBUG, MSG_DISCORD,DISCORD_WEBHOOK,PAIR_WITH,EXTSIGNAL_MODULES,coins_sold_file_path
     global TRAILING_TAKE_PROFIT,TRAILING_STOP_LOSS,total_capital_config,SESSION_TAKE_PROFIT,BACKTEST_PLAY,MOVEMENT,RECHECK_INTERVAL,TICKER_ITEMS
@@ -57,6 +57,7 @@ def init():
 
     #EnableWeb Sockets
     DATABASE = parsed_config['script_options']['DATABASE']
+    WEBSOCKET = parsed_config['script_options']['WEBSOCKET']
     TICKER_ITEMS = parsed_config['script_options']['TICKER_ITEMS']
 
     #Back Testing Setting 
