@@ -34,3 +34,5 @@ streamlit
 tabulate
 psutil
 pytz
+websocket_client
+

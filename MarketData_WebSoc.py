@@ -182,7 +182,7 @@ def get_data_frame(symbol):
     df.set_index('time', inplace=True)
     list_of_coins[symbol + '_' + '5T'] = df
         
-    calc_timeframes = ['5T', '15T']
+    calc_timeframes = ['5T', '15T','30T']
     for calc_item in calc_timeframes:	
         dataset = df.resample(calc_item).agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
         
@@ -339,6 +339,7 @@ def on_message(ws, message):
                         FiveMinDataSet = pd.concat([FiveMinDataSet,LastFiveCandle])
                         list_of_coins[symbol + '_' + '5T'] = FiveMinDataSet
                     if closeminutes % 15 == 0: calc_timeframes.append('15T')
+                    if closeminutes % 30 == 0: calc_timeframes.append('30T')
 
                     for calc_item in calc_timeframes:	
                         if calc_item == '1T':
@@ -488,7 +489,7 @@ if api_ready is not True:
     
 #define redis DataBase connection and flush it
 MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
-MarketData.flushall()
+if settings.WEBSOCKET: MarketData.flushall()
 
 #Collection of dataframes to hold histroic raw data
 list_of_coins = {}
@@ -497,7 +498,7 @@ def do_work():
     
     try:
         #Start Websocket
-        InitializeDataFeed()
+        if settings.WEBSOCKET: InitializeDataFeed()
     except Exception as e:
         print(f'MarketData_WebSoc: Exception do_work() 1: {e}')
         print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))

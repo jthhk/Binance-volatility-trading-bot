@@ -430,10 +430,15 @@ def balance_report(EndOfAlgo=False):
 
         Ref_TA_1m = MarketData.hgetall('TA:'+settings.REF_COIN+'1T')
         market_macd_1min = float(Ref_TA_1m['macd'])  
+        
+        Ref_TA_30m = MarketData.hgetall('TA:'+settings.REF_COIN+'30T')
+        market_macd_30min = float(Ref_TA_30m['macd'])  
+        
     except Exception as e:
         #Bot not ready, loading data
         market_macd_1min = -999
         market_macd_5min = -999
+        market_macd_30min = -999
         market_currprice = -999
         market_profit = -999
         TrendingDown = -999
@@ -471,7 +476,7 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'REFERENCE PRICE :')
     print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT}")
-    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | TrendDown={TrendingDown}")
+    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | 30m={market_macd_30min:.4f} | TrendDown={TrendingDown}")
     print(f'')
     print(f'ALL TIME DATA   :')
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
@@ -482,7 +487,10 @@ def balance_report(EndOfAlgo=False):
     current_process = psutil.Process()
     children = current_process.children(recursive=True)
     AuctualSubProcess = 0 
-    ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
+    if settings.WEBSOCKET:
+        ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
+    else:
+        ExpectedSubProcess =len(settings.SIGNALLING_MODULES) 
     for child in children:
         AuctualSubProcess += 1
     if (AuctualSubProcess < ExpectedSubProcess) and not EndOfAlgo: 
@@ -493,7 +501,7 @@ def balance_report(EndOfAlgo=False):
             print(f'Market Data Feedhandler restarting, please do manually via CTRL+C....')
             stop_signal_thread(feedhandler)
             feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
-            time.sleep(60)
+            time.sleep(5)
         else:
             stop_signal_threads()
             start_signal_threads()
@@ -537,14 +545,17 @@ def CheckForExistingSession():
     if os.path.isfile(settings.bot_stats_file_path) and os.stat(settings.bot_stats_file_path).st_size!= 0:
 
         #BACKUP TO LOGS
-        NewFolder = "logs/" + datetime.now().strftime('%Y%m%d_%H_%M_%SS')
-        os.makedirs(NewFolder)
-        if os.path.exists(settings.bot_stats_file_path):shutil.copy(settings.bot_stats_file_path, NewFolder)
-        if os.path.exists(settings.coins_bought_file_path):shutil.copy(settings.coins_bought_file_path, NewFolder)
-        if os.path.exists(settings.LOG_FILE):shutil.copy(settings.LOG_FILE, NewFolder)
-        if os.path.exists(settings.HISTORY_LOG_FILE):shutil.copy(settings.HISTORY_LOG_FILE, NewFolder)      
-        if os.path.exists('config.yml'):shutil.copy('config.yml', NewFolder)     
-        if os.path.exists('WebSocket.txt'):shutil.copy('WebSocket.txt', NewFolder)     
+        NewFolder = "logs/" + datetime.now().strftime('%Y%m%d_%H_%M_%SS') + "/"
+        print(settings.bot_stats_file_path)
+        print(NewFolder + settings.bot_stats_file_path)
+        os.umask(0)
+        os.makedirs(NewFolder, mode=0o777)
+        if os.path.exists(settings.bot_stats_file_path):shutil.copyfile(settings.bot_stats_file_path, NewFolder + settings.bot_stats_file_path)
+        if os.path.exists(settings.coins_bought_file_path):shutil.copyfile(settings.coins_bought_file_path, NewFolder + settings.coins_bought_file_path)
+        if os.path.exists(settings.LOG_FILE):shutil.copyfile(settings.LOG_FILE, NewFolder  + settings.LOG_FILE)
+        if os.path.exists(settings.HISTORY_LOG_FILE):shutil.copyfile(settings.HISTORY_LOG_FILE, NewFolder  + settings.HISTORY_LOG_FILE)      
+        if os.path.exists('config.yml'):shutil.copyfile('config.yml', NewFolder  + 'config.yml')     
+        if os.path.exists('WebSocket.txt'):shutil.copyfile('WebSocket.txt', NewFolder  + 'WebSocket.txt')
         print(f'{txcolors.WARNING}BINANCE DETECT MOONINGS: {txcolors.DEFAULT}Session backed up to logs ...')
 
         #Create folder under logs , copy past session files
@@ -661,7 +672,8 @@ def sell(symbol,reason):
             'symbol': coin,
             'orderId': orderID,
             'timestamp': TxnTime,
-            'avgPrice': float(SellPrice),
+            'buyPrice': float(BuyPriceWithFees),
+            'avgPrice': float(SellPriceWithFees),
             'volume': float(TotalFillQty),
             'tradeFeeBNB': float(FillFee),
             'tradeFeeUnit': sellFee,
@@ -671,10 +683,10 @@ def sell(symbol,reason):
         },index=[0])
 
         # Log trade
-        write_log(f"\tSell\t{coin}\t{TotalFillQty}\t{str(SellPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
+        write_log(f"\tSell\t{coin}\t{TotalFillQty}\t{str(BuyPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
         coins_sold = coins_sold.append(transactionInfo,ignore_index=True)
         coins_bought = coins_bought.drop(index=index)
-        msg_discord(f"{str(datetime.now())}|Sell|{coin}|{TotalFillQty}|{str(SellPrice)}|{settings.PAIR_WITH}|{SellPrice}|{ProfitAfterFees:.{decimals()}f}|{ProfitAfterFees_Perc:.2f}|{reason}")
+        msg_discord(f"{str(datetime.now())}|Sell|{coin}|{TotalFillQty}|{str(BuyPrice)}|{settings.PAIR_WITH}|{SellPrice}|{ProfitAfterFees:.{decimals()}f}|{ProfitAfterFees_Perc:.2f}|{reason}")
 
 def buy(symbol):
     '''Place Buy market orders for each volatile coin found'''
@@ -832,7 +844,7 @@ def menu():
 
 if __name__ == '__main__':
 
-    req_version = (3,9)
+    req_version = (3,8)
     if sys.version_info[:2] < req_version: 
         print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
         sys.exit()
@@ -993,9 +1005,9 @@ if __name__ == '__main__':
                     if SellPriceWithFees < SL: 
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['stop_loss'] > settings.STOP_LOSS:
-                                sell_reason = "Adj-TSL: " + str(SL) + " reached"
+                                sell_reason = "Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                             else:
-                                sell_reason = "TSL: " + str(SL) + " reached"
+                                sell_reason = "TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                         else:
                             sell_reason = "SL: " + str(SL) + " reached"
                         sell(symbol,sell_reason)
@@ -1003,11 +1015,11 @@ if __name__ == '__main__':
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['take_profit'] > settings.TAKE_PROFIT:
-                                sell_reason = "Adj-TTP: " + str(TP) + " reached"
+                                sell_reason = "Adj-TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                             else:
-                                sell_reason = "TTP: " + str(TP) + " reached"
+                                sell_reason = "TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                         else:
-                            sell_reason = "TP: " + str(TP) + " reached"
+                            sell_reason = "TP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
  
