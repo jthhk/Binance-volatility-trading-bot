@@ -94,6 +94,10 @@ def DoCycle():
                     macd5m = float(TA_5m['macd'])
                     macd15m = float(TA_15m['macd'])
 
+                    # If SMA IS LESS THAN TRIMA not Good
+                    #curve = float(TA_5m['trima'])
+                    #sma = float(TA_5m['sma'])
+
                     #If the RSI is over 70, this is generally seen as over-bought and price might move down. 
                     #A reading of 30 indicates a market that is over-sold and price might move up
                     #------------------------------

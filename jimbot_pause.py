@@ -21,10 +21,15 @@ def analyse_btc():
     now = datetime.now()
 
     Bitcoin_TA_1m = MarketData.hgetall('TA:BTCUSDT1T')
+    Bitcoin_TA_5m = MarketData.hgetall('TA:BTCUSDT5T')
     if len(Bitcoin_TA_1m) > 0:
         histbtc = float(Bitcoin_TA_1m['macd']) 
+        curve = float(Bitcoin_TA_5m['trima'])
+        sma = float(Bitcoin_TA_5m['sma'])
     else: 
         histbtc = -999
+        curve = -999
+        sma = -999
 
     if histbtc < 0:
         print(f'{SIGNAL_NAME}: Market not looking good - BitCoin 1m MACD is -ve =' + str(histbtc))
@@ -40,8 +45,11 @@ def analyse_btc():
         print(f'{SIGNAL_NAME}: Market not looking good - BitCoin is trending down :' + str(TrendingDown))
         paused = True
 
+    if sma < curve:
+        print(f'{SIGNAL_NAME}: Market not looking good - SMA IS LESS THAN TRIMA :' + str(sma) + '<' + str(curve) )
+        paused = True
 
-
+    #Trade only monday to Friday
     #if 0 <= now.weekday() <= 4:
     return paused
 
@@ -62,4 +70,4 @@ def do_work():
             if os.path.isfile(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}'):
                 os.remove(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}')
                 print(f"Bot resumed by btc_pause")
-        t.sleep(60)
+        t.sleep(settings.RECHECK_INTERVAL * 2 ) 

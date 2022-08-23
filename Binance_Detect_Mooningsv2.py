@@ -451,7 +451,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'')
+    print(f'v1.5')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -622,26 +622,26 @@ def sell(symbol,reason):
                     type = 'MARKET',
                     quantity = row['volume']
                 )
-
+                TotalFillCost = TotalFillQty = 0
                 orderID = order_details['orderId']
                 TxnTime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
-                FillFee = float(0.00000000)
+                FillFee = float(0.0)
                 # loop through each 'fill':
                 for fills in order_details['fills']:
                     FillPx = float(fills['price'])
                     FillQty = float(fills['qty'])
                     FillFee = FillFee + float(fills['commission'])
                 
-                # check if the fee was in BNB. If not, log a nice warning:
-                if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
-                    print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
-                TotalFillCost  += (FillPx * FillQty)
-                TotalFillQty += FillQty
+                    # check if the fee was in BNB. If not, log a nice warning:
+                    if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
+                        print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
+                    TotalFillCost  += (FillPx * FillQty)
+                    TotalFillQty += FillQty
 
             # error handling here in case position cannot be placed
             except Exception as e:
                 print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume coins_bought: {row['volume']}\nPrice:{row['avgPrice']}\nException: {e}")
-                reason = e  + ' - ' + reason
+                reason = str(e)  + ' - ' + str(reason)
 
         # calculate average fill price:
         SellPrice = float( TotalFillCost / TotalFillQty)
@@ -722,24 +722,25 @@ def buy(symbol):
                     type = 'MARKET',
                     quantity = volume
                 )
-
+                TotalFillQty = TotalFillCost = 0
                 orderID = order_details['orderId']
                 txntime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
-                FillFee = float(0.00000000)
+                FillFee = float(0.0)
                 # loop through each 'fill':
                 for fills in order_details['fills']:
                     FillPx = float(fills['price'])
                     FillQty = float(fills['qty'])
                     FillFee = FillFee + float(fills['commission'])
-                
-                # check if the fee was in BNB. If not, log a nice warning:
-                if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
-                    print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
-                TotalFillCost  += (FillPx * FillQty)
-                TotalFillQty += FillQty
+
+                    # check if the fee was in BNB. If not, log a nice warning:
+                    if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
+                        print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
+                    TotalFillCost  += (FillPx * FillQty)
+                    TotalFillQty += FillQty
             
             except Exception as e:
                 print(f'buy() exception: {e}')    
+                sys.exit()
 
         # calculate average fill price:
         BuyPrice = float( TotalFillCost / TotalFillQty)
@@ -791,6 +792,9 @@ def menu():
             print_notimestamp('\n')
             END = True
             LOOP = False
+            print(f'')
+            print(f'Bot terminated, end of bot report...')
+            balance_report(True)            
             sys.exit(0)
         elif menuoption == "2":
             print_notimestamp('\n')
@@ -859,9 +863,14 @@ if __name__ == '__main__':
 
     #loads config.cfg into settings.XXXXX
     settings.init()
-    
+
    # Binance - Authenticate with the client, Ensure API key is good before continuing
     if not settings.TEST_MODE:
+
+        print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
+        print('WARNING: Waiting 10 seconds before live trading as a security measure!')
+        time.sleep(10)
+
         if settings.AMERICAN_USER:
             client = Client(settings.access_key, settings.secret_key, tld='us')
         else:
@@ -905,12 +914,6 @@ if __name__ == '__main__':
     # load signalling modules
     signalthreads = start_signal_threads()   
     
-
-    if not settings.TEST_MODE:
-        print('WARNING: Test mode is disabled in the configuration, you are using _LIVE_ funds.')
-        print('WARNING: Waiting 10 seconds before live trading as a security measure!')
-        time.sleep(10)
-
     #bot settings
     bot_started_datetime = datetime.now()
     MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
@@ -1055,7 +1058,7 @@ if __name__ == '__main__':
 
             #Publish updates to files and screen
             if CoinsUpdates: update_portfolio()
-            if botIscheckingCoins or bot_paused: balance_report()
+            balance_report()
             update_bot_stats()
             #if not (botIscheckingCoins or bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
             time.sleep(settings.RECHECK_INTERVAL) 
@@ -1068,7 +1071,11 @@ if __name__ == '__main__':
             print(f'We got an API error from Binance. Re-loop. \nException:\n{bapie}')
         except KeyboardInterrupt as ki:
             stop_signal_threads()
-            if menu() == True: sys.exit(0)
+            if menu() == True: 
+                print(f'')
+                print(f'Bot terminated, end of bot report...')
+                balance_report(True)
+                sys.exit(0)
 
     if not is_bot_running:
             print(f'')

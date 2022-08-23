@@ -189,16 +189,20 @@ def get_data_frame(symbol):
         rsi = dataset.ta.rsi()
         adx = dataset.ta.adx()
         macd = dataset.ta.macd(fast=12, slow=26)
+        trima = dataset.ta.trima(length=10)
+        sma = dataset.ta.sma(length=10)
 
         get_rsi = rsi[-1:][0]
         get_adx = adx['ADX_14'][len(adx)-1]
         get_macd = macd['MACD_12_26_9'][len(macd)-1]
+        get_trima = trima[len(trima)-1]
+        get_sma = sma[len(sma)-1]
 
-        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
+        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx,'trima':get_trima,'sma':get_sma  }
         MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
         MarketData.lpush("TA", "TA:"+symbol+calc_item)
 
-    #get thr 1m
+    #get the 1m
     timeframes = '1m'
     data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=36)
     df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
@@ -209,14 +213,18 @@ def get_data_frame(symbol):
     rsi = df.ta.rsi()
     adx = df.ta.adx()
     macd = df.ta.macd(fast=12, slow=26)
+    trima = df.ta.trima(length=10)
+    sma = df.ta.sma(length=10)
 
     get_rsi = rsi[-1:][0]
     get_adx = adx['ADX_14'][len(adx)-1]
     get_macd = macd['MACD_12_26_9'][len(macd)-1]
+    get_trima = trima[len(trima)-1]
+    get_sma = sma[len(sma)-1]
 
     timeframes = '1T'
-    MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
-    MarketData.hmset("TA:"+symbol+timeframes, MarketDataRec)
+    MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx,'trima':get_trima,'sma':get_sma  }
+    MarketData.hmset("TA:"+symbol+timeframes,MarketDataRec)
     MarketData.lpush("TA", "TA:"+symbol+timeframes)
     
 
@@ -350,12 +358,18 @@ def on_message(ws, message):
                         rsi = dataset.ta.rsi()
                         adx = dataset.ta.adx()
                         macd = dataset.ta.macd(fast=12, slow=26)
-                        
+                        trima = dataset.ta.trima(length=10)
+                        sma = dataset.ta.sma(length=10)
+
+        
+
                         get_rsi = rsi[-1:][0]
                         get_adx = adx['ADX_14'][len(adx)-1] #measure here is the direction/trend of the asset. It is represented using,
                         get_macd = macd['MACDh_12_26_9'][len(macd)-1]  #The histogram is positive when MACD is higher than its nine-day EMA, and negative when it is lower.
-                        
-                        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx }
+                        get_trima = trima[len(trima)-1]
+                        get_sma = sma[len(sma)-1]
+
+                        MarketDataRec = {'symbol': symbol , 'macd': get_macd,'rsi': get_rsi,'adx': get_adx ,'trima':get_trima,'sma':get_sma}
                         MarketData.hmset("TA:"+symbol+calc_item, MarketDataRec)
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
                         highpx =  candle["h"]
@@ -506,3 +520,19 @@ def do_work():
             f.write(f'{time.strftime("%Y-%m-%d %H:%M")} |Exception do_work|{e}\n')
     except KeyboardInterrupt:
         print(f'{txcolors.WARNING}Market data feedhandler exiting - do_work.')
+
+#if __name__ == '__main__':
+#Uncomment for Testing Standalone only
+    #loads config.cfg into settings.XXXXX
+    #settings.init()
+
+    #client = Client(settings.access_key, settings.secret_key)
+
+    # If the users has a bad / incorrect API key.
+    # this will stop the script from starting, and display a helpful error.
+    #api_ready, msg = test_api_key(client, BinanceAPIException)
+    #if api_ready is not True:
+    #    exit(f'{txcolors.SELL_LOSS}{msg}{txcolors.DEFAULT}')
+
+    #Start MarketData Thread
+    #do_work()

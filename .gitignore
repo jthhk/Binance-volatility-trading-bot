@@ -32,3 +32,8 @@ tickers/tickers.txt
 *1T*.txt
 *OneMin*.txt
 web*.txt 
+logs/20220205_12_37_50S/WebSocket.txt
+signals/jimbot_pause.pause
+auto_coins_binance_usdt.txt
+coins_binance_usdt.txt
+tickers/coins_binance_usdt.txt
