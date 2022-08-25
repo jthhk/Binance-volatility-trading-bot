@@ -291,15 +291,19 @@ def on_message(ws, message):
     try:
         event = json.loads(message)
         
-        exchange = ccxt.binance()
+        #exchange = ccxt.binance()
 
         try:
             eventtype = event['e'] 
+            eventtime = event['E'] 
         except:
             eventtype = "BookTicker"
+            eventtime = datetime.utcnow()
         
-        if DEBUG : print(f"{eventtype} event")
+        if DEBUG : print(f"Market data Update: {eventtype} @ {eventtime}")
 
+        EventRec = {'updated': eventtime }
+        MarketData.hmset("UPDATE:"+eventtype, EventRec)
 
         if eventtype == "kline":
             candle=event['k']
@@ -391,7 +395,7 @@ def on_message(ws, message):
                 
                 MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
-                #data = MarketData.hgetall("L1:" + symbol)
+                if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
         elif eventtype == "aggTrade":
             symbol = event["s"]
@@ -425,7 +429,7 @@ def on_message(ws, message):
 
             MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
-            data = MarketData.hgetall("L1:" + symbol)
+            if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
 
         elif eventtype == "BookTicker":
@@ -455,7 +459,7 @@ def on_message(ws, message):
 
             MarketDataRec = {'BBPx' : event["b"], 'BBQty': event["B"],'BAPx' : event["a"], 'BAQty': event["A"],'price': LastPx,'close': ClosePx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand, 'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
-            data = MarketData.hgetall("L1:" + symbol)
+            if DEBUG: data = MarketData.hgetall("L1:" + symbol)
         elif eventtype == "Ping":
             pong_json = { 'Type':'Pong' }
             ws.send(json.dumps(pong_json))
@@ -468,6 +472,7 @@ def on_message(ws, message):
         if DEBUG:
             print(data)
             print("------" + eventtype + "------")
+
 
         #Write events to log file to allow backtesting 
         if settings.BACKTEST_RECORD:

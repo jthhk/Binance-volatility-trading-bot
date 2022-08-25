@@ -32,7 +32,7 @@ trading_options:
   # Total amount per trade (your base currency balance must be at least TRADE_SLOTS * TRADE_TOTAL)
   # Binance uses a minimum of 10 USDT per trade, add a bit extra to enable selling if the price drops.
   # Recommended: no less than 12 USDT. Suggested: 15 or more.
-  TRADE_TOTAL: 20
+  TRADE_TOTAL: 50
 
   # Reference coin for display
   REF_COIN: 'BTCUSDT'
@@ -59,9 +59,9 @@ trading_options:
   'RENBTC']
 
   # Maximum number of trade 'slots' at any time (your USDT balance must be at least TRADE_SLOTS * TRADE_TOTAL)
-  TRADE_SLOTS: 5
+  TRADE_SLOTS: 10
   # Maximum number of trade 'slots' at any time (your USDT balance must be at least MAX_COINS * QUANTITY)
-  MAX_COINS: 5
+  MAX_COINS: 10
 
   # Number of times to check for TP/SL during each TIME_DIFFERENCE (minimum: 1).
   RECHECK_INTERVAL: 1

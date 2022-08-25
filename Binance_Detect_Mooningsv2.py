@@ -433,7 +433,7 @@ def balance_report(EndOfAlgo=False):
         
         Ref_TA_30m = MarketData.hgetall('TA:'+settings.REF_COIN+'30T')
         market_macd_30min = float(Ref_TA_30m['macd'])  
-        
+
     except Exception as e:
         #Bot not ready, loading data
         market_macd_1min = -999
@@ -443,6 +443,20 @@ def balance_report(EndOfAlgo=False):
         market_profit = -999
         TrendingDown = -999
 
+    kline = -999
+    BookTicker = -999
+    aggTrade = -999
+
+    Eventdata = MarketData.hgetall("UPDATE:kline")   
+    if len(Eventdata) >0: kline = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
+
+    Eventdata = MarketData.hgetall("UPDATE:aggTrade")   
+    if len(Eventdata) >0: aggTrade = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
+
+    Eventdata = MarketData.hgetall("UPDATE:BookTicker")   
+    if len(Eventdata) >0: BookTicker = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
+
+
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
     if settings.TEST_MODE:
@@ -451,7 +465,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.5')
+    print(f'v1.6')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -482,6 +496,8 @@ def balance_report(EndOfAlgo=False):
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
+    print(f'')
+    print(f'Web Socket Status: kline|{kline} | BookTicker|{BookTicker} | aggTrade|{aggTrade}')
     print(f'')
     print(f'External Signals: {settings.SIGNALLING_MODULES}')
     current_process = psutil.Process()
