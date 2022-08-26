@@ -79,8 +79,8 @@ def init():
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
 
-    #COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
-
+    COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
+    
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
     CUSTOM_LIST_AUTORELOAD = parsed_config['trading_options']['CUSTOM_LIST_AUTORELOAD']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']

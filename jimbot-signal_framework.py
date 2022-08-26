@@ -151,7 +151,7 @@ def DoCycle():
                             TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 30 and MarketPressure == 'Bull' and TrendingUp > 3)
                             if TimeFrameCheck:
                                 BuyCoin = True
-
+                    BuyCoin = True
                     #Custom logging output for generic debug mode below
                     Custom_Fields = (
                                     "current_drop:" + str(current_drop) + "\n" 

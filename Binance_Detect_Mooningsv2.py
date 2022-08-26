@@ -96,7 +96,7 @@ from binance.exceptions import BinanceAPIException
 from requests.exceptions import ReadTimeout, ConnectionError
 
 # used for dates
-from datetime import datetime
+from datetime import datetime,timedelta
 import time
 
 # used to store trades and sell assets
@@ -870,7 +870,7 @@ if __name__ == '__main__':
         sys.exit()
 
     global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total,bot_paused
-    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
+    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc,coins_cooloff
     global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated,feedhandler,ExternalPaused
 
     historic_profit_incfees_perc = historic_profit_incfees_total = 0
@@ -915,6 +915,9 @@ if __name__ == '__main__':
     else:
         coins_sold = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','profit','perc_profit','reason'])
 
+    #cool down, temp not saved to file 
+    coins_cooloff = pd.DataFrame(columns=['symbol',  'timestamp'])
+
     print(f'{txcolors.WARNING}Press Ctrl-C for more options / to stop the bot{txcolors.DEFAULT}')
     
     #Clear alerting
@@ -950,7 +953,17 @@ if __name__ == '__main__':
                 externals = buy_external_signals()
                 for excoin in externals:
                     CoinAlreadyBought = coins_bought[coins_bought['symbol'].str.contains(excoin)]
-                    if len(CoinAlreadyBought.index) == 0 and (len(coins_bought.index) + 1) <= settings.TRADE_SLOTS:
+                    CoinCoolingDown = coins_cooloff[coins_cooloff['symbol'].str.contains(excoin)]
+                    if len(CoinCoolingDown) > 0:
+                        #Check Timestamp and over the cool off period, if so then remove so we can buy again  
+                        CooloffEndTime = pd.to_datetime(CoinCoolingDown['timestamp']) +timedelta(minutes=settings.COOLOFF_PERIOD)
+                        if datetime.now() >=  CooloffEndTime.iloc[0]:
+                             coins_cooloff = coins_cooloff.drop(index=coins_cooloff['symbol'].str.contains(excoin).index.values)
+                             CoinCoolingDown = CoinCoolingDown.drop(index=coins_cooloff['symbol'].str.contains(excoin).index.values)
+                        else:
+                            print("Stock still cooling down")
+
+                    if len(CoinAlreadyBought.index) == 0 and len(CoinCoolingDown.index) == 0 and (len(coins_bought.index) + 1) <= settings.TRADE_SLOTS:
                         buy(excoin)
                         CoinsUpdates = True 
 
@@ -1027,8 +1040,21 @@ if __name__ == '__main__':
                                 sell_reason = "Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                             else:
                                 sell_reason = "TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
+                                #Add to the cooloff list so not to buy back at once
+                                transactionInfo = pd.DataFrame({
+                                    'symbol': symbol,
+                                    'timestamp': datetime.now(),
+                                },index=[0])
+                                coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)
                         else:
                             sell_reason = "SL: " + str(SL) + " reached"
+                            #Add to the cooloff list so not to buy back at once
+                            transactionInfo = pd.DataFrame({
+                                'symbol': symbol,
+                                'timestamp': datetime.now(),
+                            },index=[0])
+                            coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)
+
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
                     if SellPriceWithFees > TP:
@@ -1058,9 +1084,9 @@ if __name__ == '__main__':
                         elif allsession_profits_perc <= float(settings.SESSION_STOP_LOSS):
                             sell_reason = "SSL Override:" + str(settings.SESSION_STOP_LOSS) + f"% |loss:{allsession_profits_perc}%"
                             is_bot_running = False
-                        elif ((session_profit_incfees_perc + unrealised_session_profit_incfees_perc) <= (float(settings.SESSION_STOP_LOSS)/2) and (market_profit < -0.7)):
-                            sell_reason = "Kill Switch:" + str(float(settings.SESSION_STOP_LOSS)/2) + f"% |loss:{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc)}%|" + str(market_profit)
-                            is_bot_running = False
+                        #elif ((session_profit_incfees_perc + unrealised_session_profit_incfees_perc) <= (float(settings.SESSION_STOP_LOSS)/2) and (market_profit < -0.7)):
+                        #    sell_reason = "Kill Switch:" + str(float(settings.SESSION_STOP_LOSS)/2) + f"% |loss:{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc)}%|" + str(market_profit)
+                        #    is_bot_running = False
                             
  
                         if not is_bot_running:

@@ -67,10 +67,13 @@ trading_options:
   RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -1.5 #-100 #-1.9
+  STOP_LOSS: -0.1 #-100 #-1.9
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: 1.9 #1.0 #1.9
+
+  # define cool off period (minutes), so not to buy a losing coin right away.
+  COOLOFF_PERIOD: 5
 
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
@@ -123,7 +126,7 @@ trading_options:
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
      - jimbot-signal_framework
-     - jimbot_pause
+    # - jimbot_pause
     #  - scalper
 
 
