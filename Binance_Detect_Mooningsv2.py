@@ -465,7 +465,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.6')
+    print(f'v1.6.2')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
