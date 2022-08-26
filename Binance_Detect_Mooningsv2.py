@@ -959,7 +959,7 @@ if __name__ == '__main__':
                         CooloffEndTime = pd.to_datetime(CoinCoolingDown['timestamp']) +timedelta(minutes=settings.COOLOFF_PERIOD)
                         if datetime.now() >=  CooloffEndTime.iloc[0]:
                              coins_cooloff = coins_cooloff.drop(index=coins_cooloff['symbol'].str.contains(excoin).index.values)
-                             CoinCoolingDown = CoinCoolingDown.drop(index=coins_cooloff['symbol'].str.contains(excoin).index.values)
+                             CoinCoolingDown = CoinCoolingDown.drop(index=CoinCoolingDown['symbol'].str.contains(excoin).index.values)
                         else:
                             print("Stock still cooling down")
 

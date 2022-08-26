@@ -37,3 +37,4 @@ signals/jimbot_pause.pause
 auto_coins_binance_usdt.txt
 coins_binance_usdt.txt
 tickers/coins_binance_usdt.txt
+*.buy
