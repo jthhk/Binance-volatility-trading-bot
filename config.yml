@@ -67,10 +67,10 @@ trading_options:
   RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -0.1 #-100 #-1.9
+  STOP_LOSS: -1 #-100 #-1.9
 
   # define in % when to take profit on a profitable coin.
-  TAKE_PROFIT: 1.9 #1.0 #1.9
+  TAKE_PROFIT: 0.2 #1.0 #1.9
 
   # define cool off period (minutes), so not to buy a losing coin right away.
   COOLOFF_PERIOD: 5
@@ -87,7 +87,7 @@ trading_options:
   # when hit TAKE_PROFIT, move TAKE_PROFIT up by TRAILING_TAKE_PROFIT percentage points
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
-  TRAILING_STOP_LOSS: -0.2
+  TRAILING_STOP_LOSS: -0.1
   TRAILING_TAKE_PROFIT: 0.5
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
@@ -126,7 +126,7 @@ trading_options:
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
      - jimbot-signal_framework
-    # - jimbot_pause
+     - jimbot_pause
     #  - scalper
 
 

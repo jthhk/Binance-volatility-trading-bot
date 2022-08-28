@@ -1019,13 +1019,15 @@ if __name__ == '__main__':
                     SL = float(BuyPrice) + ((float(BuyPrice) * (row['stop_loss'])/100))
   
                     #TP and SL Adjustment to lock in profits
+                    #SellPriceWithFees (Current px) > TP (bought + take_profit target px)
                     if SellPriceWithFees >= TP and settings.USE_TRAILING_STOP_LOSS: 
                             row['stop_loss'] =  row['take_profit'] - settings.TRAILING_STOP_LOSS 
                             row['take_profit'] =   row['take_profit'] + settings.TRAILING_TAKE_PROFIT 
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
                             TP = float(BuyPrice) + ((float(BuyPrice) * (row['take_profit'])/100))
-                    
+                            SL = float(BuyPrice) + ((float(BuyPrice) * (row['stop_loss'])/100))
+                   
                     #exposure_calcuated for balance_report screen
                     exposure_calcuated += round((SellPriceWithFees *row['volume']) ,0)
 
