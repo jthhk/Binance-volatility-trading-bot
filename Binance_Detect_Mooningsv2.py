@@ -1026,7 +1026,6 @@ if __name__ == '__main__':
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
                             TP = float(BuyPrice) + ((float(BuyPrice) * (row['take_profit'])/100))
-                            SL = float(BuyPrice) + ((float(BuyPrice) * (row['stop_loss'])/100))
                    
                     #exposure_calcuated for balance_report screen
                     exposure_calcuated += round((SellPriceWithFees *row['volume']) ,0)
@@ -1042,23 +1041,17 @@ if __name__ == '__main__':
                                 sell_reason = "Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                             else:
                                 sell_reason = "TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
-                                #Add to the cooloff list so not to buy back at once
-                                transactionInfo = pd.DataFrame({
-                                    'symbol': symbol,
-                                    'timestamp': datetime.now(),
-                                },index=[0])
-                                coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)
                         else:
                             sell_reason = "SL: " + str(SL) + " reached"
-                            #Add to the cooloff list so not to buy back at once
-                            transactionInfo = pd.DataFrame({
-                                'symbol': symbol,
-                                'timestamp': datetime.now(),
-                            },index=[0])
-                            coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)
-
+        
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
+                        #Add to the cooloff list so not to buy back at once
+                        transactionInfo = pd.DataFrame({
+                            'symbol': symbol,
+                            'timestamp': datetime.now(),
+                        },index=[0])
+                        coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)                        
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['take_profit'] > settings.TAKE_PROFIT:
@@ -1069,6 +1062,12 @@ if __name__ == '__main__':
                             sell_reason = "TP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
+                        #Add to the cooloff list so not to buy back at once
+                        transactionInfo = pd.DataFrame({
+                            'symbol': symbol,
+                            'timestamp': datetime.now(),
+                        },index=[0])
+                        coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)                                                
  
                     #Check Session stats
                     unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + ProfitAfterFees)
