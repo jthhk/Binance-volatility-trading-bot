@@ -125,8 +125,11 @@ trading_options:
     # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
-     - jimbot-signal_framework
+     - jimbot-signal_no_calcs
      - jimbot_pause
+    
+    #  -jimbot-signal_no_calcs
+    #  -jimbot-signal_framework
     #  - scalper
 
 
