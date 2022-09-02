@@ -86,9 +86,9 @@ def DoCycle():
                         MarketPressure = data['MarketPressure']  #TakerCount > MakerCount = Bull else Bear
                         
                         #Candle data 
-                        #TA_1m = MarketData.hgetall('TA:'+symbol+'1T')
-                        #TA_5m = MarketData.hgetall('TA:'+symbol+'5T')
-                        #TA_15m = MarketData.hgetall('TA:'+symbol+'15T')
+                        TA_1m = MarketData.hgetall('TA:'+symbol+'1T')
+                        TA_5m = MarketData.hgetall('TA:'+symbol+'5T')
+                        TA_15m = MarketData.hgetall('TA:'+symbol+'15T')
 
                         #MACD hist crossing above zero is considered bullish, while crossing below zero is bearish.
                         macd1m = float(TA_1m['macd'])
