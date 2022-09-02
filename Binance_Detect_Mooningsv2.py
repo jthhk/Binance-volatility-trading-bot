@@ -465,7 +465,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.6.2')
+    print(f'v1.6.3')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -760,6 +760,7 @@ def buy(symbol):
 
         # calculate average fill price:
         BuyPrice = float( TotalFillCost / TotalFillQty)
+        # calc the tradeFee Approx @ unit level (from Olorin Sledge), display only
         buyFee = (BuyPrice * (settings.TRADING_FEE/100))
 
         # create object with received data from Binance
@@ -775,7 +776,7 @@ def buy(symbol):
             'stop_loss' :settings.STOP_LOSS
         },index=[0])
 
-        # Log trade
+        # Log trade coin['price']}\t{settings.PAIR_WITH}")
         write_log(f"\tBuy\t{symbol}\t{volume}\t{coin['price']}\t{settings.PAIR_WITH}")
         coins_bought = coins_bought.append(transactionInfo,ignore_index=True)
         # error handling here in case position cannot be placed

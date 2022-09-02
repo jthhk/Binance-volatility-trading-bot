@@ -95,7 +95,7 @@ trading_options:
   # when hit SESSION_STOP_LOSS %, sell all coins and stop bot.
   # Note, SESSION_STOP_LOSS needs to be a NEGATIVE number i.e. -2
   SESSION_TPSL_OVERRIDE: True
-  SESSION_TAKE_PROFIT: 5
+  SESSION_TAKE_PROFIT: 10
   SESSION_STOP_LOSS: -2
 
   # Trading fee in % per trade.
