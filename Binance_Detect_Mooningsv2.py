@@ -465,7 +465,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.6.3')
+    print(f'v1.6.4')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -628,7 +628,7 @@ def sell(symbol,reason):
         FillPx = float(data['price']) if float(data['price']) > 0 else BuyPrice
         TotalFillCost = TotalFillQty * FillPx
         TxnTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+        EntryTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
         if not settings.TEST_MODE:
             try:
@@ -647,12 +647,13 @@ def sell(symbol,reason):
                     FillPx = float(fills['price'])
                     FillQty = float(fills['qty'])
                     FillFee = FillFee + float(fills['commission'])
-                
+
                     # check if the fee was in BNB. If not, log a nice warning:
                     if (fills['commissionAsset'] != 'BNB') and (settings.TRADING_FEE == 0.075):
                         print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
                     TotalFillCost  += (FillPx * FillQty)
                     TotalFillQty += FillQty
+
 
             # error handling here in case position cannot be placed
             except Exception as e:
@@ -688,6 +689,7 @@ def sell(symbol,reason):
             'symbol': coin,
             'orderId': orderID,
             'timestamp': TxnTime,
+            'entrytimestamp': EntryTime,
             'buyPrice': float(BuyPriceWithFees),
             'avgPrice': float(SellPriceWithFees),
             'volume': float(TotalFillQty),
@@ -699,7 +701,7 @@ def sell(symbol,reason):
         },index=[0])
 
         # Log trade
-        write_log(f"\tSell\t{coin}\t{TotalFillQty}\t{str(BuyPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
+        write_log(f"\t{str(TxnTime)}\t{str(EntryTime)}\tSell\t{coin}\t{TotalFillQty}\t{str(BuyPrice)}\t{settings.PAIR_WITH}\t{SellPrice}\t{ProfitAfterFees:.{decimals()}f}\t{ProfitAfterFees_Perc:.2f}\t{reason}")
         coins_sold = coins_sold.append(transactionInfo,ignore_index=True)
         coins_bought = coins_bought.drop(index=index)
         msg_discord(f"{str(datetime.now())}|Sell|{coin}|{TotalFillQty}|{str(BuyPrice)}|{settings.PAIR_WITH}|{SellPrice}|{ProfitAfterFees:.{decimals()}f}|{ProfitAfterFees_Perc:.2f}|{reason}")
@@ -728,7 +730,8 @@ def buy(symbol):
         FillPx = float(data['price'])
         TotalFillCost = TotalFillQty * FillPx
         txntime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
+        EntryTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+
         if not settings.TEST_MODE:
             # try to create a real order if the test orders did not raise an exception
             try:
@@ -758,6 +761,7 @@ def buy(symbol):
                 print(f'buy() exception: {e}')    
                 sys.exit()
 
+
         # calculate average fill price:
         BuyPrice = float( TotalFillCost / TotalFillQty)
         # calc the tradeFee Approx @ unit level (from Olorin Sledge), display only
@@ -768,8 +772,9 @@ def buy(symbol):
             'symbol': symbol,
             'orderId': orderID,
             'timestamp': txntime,
+            'entrytimestamp': str(EntryTime),
             'avgPrice': float(BuyPrice),
-            'volume': float(TotalFillQty),
+            'volume': volume,
             'tradeFeeBNB': float(FillFee),
             'tradeFeeUnit': buyFee,
             'take_profit' : settings.TAKE_PROFIT,
@@ -777,7 +782,7 @@ def buy(symbol):
         },index=[0])
 
         # Log trade coin['price']}\t{settings.PAIR_WITH}")
-        write_log(f"\tBuy\t{symbol}\t{volume}\t{coin['price']}\t{settings.PAIR_WITH}")
+        write_log(f"\t{str(txntime)}\t{str(EntryTime)}\tBuy\t{symbol}\t{volume}\t{coin['price']}\t{settings.PAIR_WITH}")
         coins_bought = coins_bought.append(transactionInfo,ignore_index=True)
         # error handling here in case position cannot be placed
 
@@ -907,14 +912,14 @@ if __name__ == '__main__':
         coins_bought = pd.read_json(settings.coins_bought_file_path, orient ='split', compression = 'infer')
         coins_bought.head()
     else:
-        coins_bought = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss', 'Lastpx','Profit'])
+        coins_bought = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'entrytimestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','take_profit','stop_loss', 'Lastpx','Profit'])
     
     #Get Sold File
     if os.path.isfile(settings.coins_sold_file_path) and os.stat(settings.coins_sold_file_path).st_size!= 0:
         coins_sold = pd.read_json(settings.coins_sold_file_path, orient ='split', compression = 'infer')
         coins_sold.head()
     else:
-        coins_sold = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','profit','perc_profit','reason'])
+        coins_sold = pd.DataFrame(columns=['symbol', 'orderId', 'timestamp', 'entrytimestamp', 'avgPrice', 'volume', 'tradeFeeBNB','tradeFeeUnit','profit','perc_profit','reason'])
 
     #cool down, temp not saved to file 
     coins_cooloff = pd.DataFrame(columns=['symbol',  'timestamp'])
@@ -1022,7 +1027,7 @@ if __name__ == '__main__':
                     #TP and SL Adjustment to lock in profits
                     #SellPriceWithFees (Current px) > TP (bought + take_profit target px)
                     if SellPriceWithFees >= TP and settings.USE_TRAILING_STOP_LOSS: 
-                            row['stop_loss'] =  row['take_profit'] - settings.TRAILING_STOP_LOSS 
+                            row['stop_loss'] =  round(row['take_profit'] + settings.TRAILING_STOP_LOSS,2) 
                             row['take_profit'] =   row['take_profit'] + settings.TRAILING_TAKE_PROFIT 
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
@@ -1080,6 +1085,13 @@ if __name__ == '__main__':
                     market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
                     if settings.SESSION_TPSL_OVERRIDE:
+
+                        #Session TP and SL Adjustment to lock in profits
+                        #SellPriceWithFees (Current px) > TP (bought + take_profit target px)
+                        if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT) and settings.USE_TRAILING_STOP_LOSS: 
+                            settings.SESSION_STOP_LOSS = float(settings.SESSION_TAKE_PROFIT) - settings.TRAILING_STOP_LOSS
+                            settings.SESSION_TAKE_PROFIT = float(settings.SESSION_TAKE_PROFIT) + settings.TRAILING_TAKE_PROFIT
+     
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT): 
                             sell_reason = "STP Override:" + str(settings.SESSION_TAKE_PROFIT) + f"% |profit:{allsession_profits_perc}%"
                             is_bot_running = False
@@ -1097,6 +1109,7 @@ if __name__ == '__main__':
                             exposure_calcuated = 0
                             sell('ALL',sell_reason)
                             print(f'{sell_reason}')
+
                             CoinsUpdates = True
                             break
 

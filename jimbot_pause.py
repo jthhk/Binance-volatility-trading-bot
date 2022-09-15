@@ -47,7 +47,7 @@ def analyse_btc():
 
     if sma < curve:
         print(f'{SIGNAL_NAME}: Market not looking good - SMA IS LESS THAN TRIMA :' + str(sma) + '<' + str(curve) )
-        paused = True
+        #paused = True
 
     #Trade only monday to Friday
     #if 0 <= now.weekday() <= 4:
@@ -65,9 +65,9 @@ def do_work():
         if paused:
             with open(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}', 'a+') as f:
                 f.write('yes')
-            print(f"Bot paused by BTC")
+            print("Bot paused by BTC")
         else:
             if os.path.isfile(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}'):
                 os.remove(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}')
-                print(f"Bot resumed by btc_pause")
+                print("Bot resumed by btc_pause")
         t.sleep(settings.RECHECK_INTERVAL * 2 ) 

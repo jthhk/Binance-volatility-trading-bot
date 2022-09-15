@@ -232,12 +232,13 @@ def on_message(ws, message):
                     LastPx = closePx
                 
                 MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': candle["h"], 'low': candle["l"], 'close': closePx, 'potential' : potential, 'interval' : interval,'LastPx' : LastPx}
-                MarketData.hmset("L1:"+symbol, MarketDataRec)
-                data = MarketData.hgetall("L1:" + symbol)
             else:
                 interval = candle["i"]
-                #if is_candle_closed:
-                    # TO DO: Need to do other timeframes
+                LastPx = candle["o"]
+                MarketDataRec = {'LastPx' : LastPx}
+            
+            MarketData.hmset("L1:"+symbol, MarketDataRec)
+            data = MarketData.hgetall("L1:" + symbol)
 
         elif eventtype == "aggTrade":
             symbol = event["s"]
@@ -307,7 +308,7 @@ CUSTOM_LIST_AUTORELOAD = parsed_config['trading_options']['CUSTOM_LIST_AUTORELOA
 TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
 
 #define redis DataBase connection and flush it
-MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
+MarketData = redis.Redis(host='app', port=6379, db=DATABASE,decode_responses=True)
 MarketData.flushall()
 
 def do_work():

@@ -52,7 +52,7 @@ else:
 SIGNAL_NAME = 'jimbot_signal'
 block_info = False
 
-MarketData = redis.Redis(host='localhost', port=6379, db=DATABASE,decode_responses=True)
+MarketData = redis.Redis(host='app', port=6379, db=DATABASE,decode_responses=True)
 
 def DoCycle():
 

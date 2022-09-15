@@ -300,7 +300,16 @@ def on_message(ws, message):
             eventtype = "BookTicker"
             eventtime = datetime.utcnow()
         
+
+                
         if DEBUG : print(f"Market data Update: {eventtype} @ {eventtime}")
+
+        if LATENCY_TEST:
+            file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H') + '.txt'
+            with open(file_path, "a") as output_file:
+                utc_timestamp = datetime.utcnow()
+                utc_eventtime = datetime.fromtimestamp(eventtime/1000, tz=pytz.utc)
+                output_file.write(str(eventtype) + ';' + str(utc_eventtime) + ';' + str(utc_timestamp) + '\n')
 
         EventRec = {'updated': eventtime }
         MarketData.hmset("UPDATE:"+eventtype, EventRec)
@@ -312,11 +321,19 @@ def on_message(ws, message):
             symbol = candle["s"]
             interval = candle["i"]
             closePx = candle["c"]
+            if is_candle_closed:
+                LastPx = candle["c"]
+            else:
+                LastPx = candle["o"]
             potential = -1
 
-            if interval == "1m":
-                #1min/called standard - IF STATEMENT FOR FUTURE EXPANSION 
-                LastPx = MarketData.hget("L1:" + symbol,'price')
+            if interval == "1s":
+                #1sec/can be used to get prices
+                MarketDataRec = {'symbol': symbol ,'price' : LastPx, 'update': 1}
+                MarketData.hmset("L1:"+symbol, MarketDataRec)
+            elif interval == "1m":
+                #1min/called standard 
+                #LastPx = MarketData.hget("L1:" + symbol,'price')
                 OneMinDataSet = list_of_coins[symbol + '_1T'] 
                 FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
 
@@ -378,10 +395,9 @@ def on_message(ws, message):
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
                         highpx =  candle["h"]
                         lowpx = candle["l"]
-
                 else:
                     closePx = candle["o"]
-
+                    
                 #session High/low using 1m and 5m combined                 
                 SixMinDataSet = pd.concat([OneMinDataSet,FiveMinDataSet])
                 column = SixMinDataSet["high"]
@@ -389,9 +405,6 @@ def on_message(ws, message):
                 column = SixMinDataSet["low"]
                 lowpx = column.min()
                 potential = (float(lowpx) / float(highpx)) * 100
-
-                if float(LastPx) == -1:
-                    LastPx = closePx
                 
                 MarketDataRec = {'symbol': symbol , 'open': candle["o"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
@@ -479,7 +492,7 @@ def on_message(ws, message):
             file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H_%M') + '.txt'
             with open(file_path, "a") as output_file:
                 output_file.write(message + '\n')
-           
+        
     except KeyboardInterrupt as ki:
         pass
         #print(f'{txcolors.WARNING}Market data feedhandler exixting - on_message.')
@@ -492,6 +505,7 @@ settings.init()
 
 # Default no debugging
 DEBUG = False
+LATENCY_TEST = False
 
 # Binance - Authenticate with the client, Ensure API key is good before continuing
 if settings.AMERICAN_USER:
@@ -526,18 +540,22 @@ def do_work():
     except KeyboardInterrupt:
         print(f'{txcolors.WARNING}Market data feedhandler exiting - do_work.')
 
-#if __name__ == '__main__':
+"""
+# Remove "*3 above 
+if __name__ == '__main__':
 #Uncomment for Testing Standalone only
     #loads config.cfg into settings.XXXXX
-    #settings.init()
+    settings.init()
 
-    #client = Client(settings.access_key, settings.secret_key)
+    client = Client(settings.access_key, settings.secret_key)
 
     # If the users has a bad / incorrect API key.
     # this will stop the script from starting, and display a helpful error.
-    #api_ready, msg = test_api_key(client, BinanceAPIException)
-    #if api_ready is not True:
-    #    exit(f'{txcolors.SELL_LOSS}{msg}{txcolors.DEFAULT}')
+    api_ready, msg = test_api_key(client, BinanceAPIException)
+    if api_ready is not True:
+        exit(f'{txcolors.SELL_LOSS}{msg}{txcolors.DEFAULT}')
 
     #Start MarketData Thread
-    #do_work()
+    do_work()
+# Remove "*3 below 
+"""

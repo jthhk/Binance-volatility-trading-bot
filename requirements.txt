@@ -24,6 +24,7 @@ websockets==9.1
 yarl==1.6.3
 numpy~=1.21.2
 prettytable==2.2.1
+pandas==1.3.5
 pandas-ta==0.3.14b0
 ccxt==1.58.23
 asyncio==3.4.3
@@ -35,4 +36,4 @@ tabulate
 psutil
 pytz
 websocket_client
-
+pdoc3

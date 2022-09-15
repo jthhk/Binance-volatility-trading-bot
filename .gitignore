@@ -40,3 +40,8 @@ tickers/coins_binance_usdt.txt
 *.buy
 jimbot-signal_tester.py
 test.expr
+coin_selection.csv
+tickers.txt.old
+tickers.txt
+coin_selector.py
+tickers.txt

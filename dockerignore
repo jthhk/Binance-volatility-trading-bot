@@ -1,0 +1,15 @@
+#Ignore passwords file
+#creds.yml
+
+#Ignore logs drectory
+logs/
+
+#Ignore the git and cache folders
+.git
+.cache
+
+#Ingore all markdown and class files
+*history*.txt
+*trades*.txt
+*WebSocket*.txt
+*.json
