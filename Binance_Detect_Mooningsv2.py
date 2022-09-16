@@ -1047,6 +1047,12 @@ if __name__ == '__main__':
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['stop_loss'] > settings.STOP_LOSS:
                                 sell_reason = "Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
+                                #Add to the cooloff list so not to buy back at once
+                                transactionInfo = pd.DataFrame({
+                                    'symbol': symbol,
+                                    'timestamp': datetime.now(),
+                                },index=[0])
+                                coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)  
                             else:
                                 sell_reason = "TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                         else:
@@ -1054,12 +1060,7 @@ if __name__ == '__main__':
         
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
-                        #Add to the cooloff list so not to buy back at once
-                        transactionInfo = pd.DataFrame({
-                            'symbol': symbol,
-                            'timestamp': datetime.now(),
-                        },index=[0])
-                        coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)                        
+                      
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['take_profit'] > settings.TAKE_PROFIT:

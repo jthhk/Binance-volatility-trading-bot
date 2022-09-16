@@ -75,7 +75,7 @@ trading_options:
   TAKE_PROFIT: 0.2 #1.0 #1.9
 
   # define cool off period (minutes), so not to buy a losing coin right away.
-  COOLOFF_PERIOD: 15
+  COOLOFF_PERIOD: 30
 
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
