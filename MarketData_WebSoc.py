@@ -25,7 +25,8 @@ import logging
 #timezones
 import pytz
 
-
+#RegEx
+from re import search
 
 # Needed for colorful console output
 from colorama import init
@@ -298,9 +299,8 @@ def on_message(ws, message):
             eventtime = event['E'] 
         except:
             eventtype = "BookTicker"
-            eventtime = datetime.utcnow()
-        
-
+            eventtime = round(time.time())
+   
                 
         if DEBUG : print(f"Market data Update: {eventtype} @ {eventtime}")
 
@@ -321,10 +321,14 @@ def on_message(ws, message):
             symbol = candle["s"]
             interval = candle["i"]
             closePx = candle["c"]
-            if is_candle_closed:
-                LastPx = candle["c"]
-            else:
-                LastPx = candle["o"]
+
+            #get price, if not set then set it, if BookTicker not enabled then update
+            LastPx = MarketData.hget("L1:" + symbol,'price')
+            if (search("BookTicker", str(settings.TICKER_ITEMS))):
+                if is_candle_closed:
+                    LastPx = candle["c"]
+                else:
+                    LastPx = candle["o"]
             potential = -1
 
             if interval == "1s":
@@ -333,7 +337,6 @@ def on_message(ws, message):
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
             elif interval == "1m":
                 #1min/called standard 
-                #LastPx = MarketData.hget("L1:" + symbol,'price')
                 OneMinDataSet = list_of_coins[symbol + '_1T'] 
                 FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
 
@@ -381,8 +384,7 @@ def on_message(ws, message):
                         macd = dataset.ta.macd(fast=12, slow=26)
                         trima = dataset.ta.trima(length=10)
                         sma = dataset.ta.sma(length=10)
-
-        
+      
 
                         get_rsi = rsi[-1:][0]
                         get_adx = adx['ADX_14'][len(adx)-1] #measure here is the direction/trend of the asset. It is represented using,
@@ -418,7 +420,7 @@ def on_message(ws, message):
             MakerCount = float(MarketData.hget("L1:" + symbol,'MakerCount'))
             TakerCount = float(MarketData.hget("L1:" + symbol,'TakerCount'))
 
-            if float(LastPx) == -1:
+            if (search("BookTicker", str(settings.TICKER_ITEMS))):
                 LastPx = event["p"]
 
             if event["p"] < LastPx:
@@ -440,7 +442,7 @@ def on_message(ws, message):
             else:
                 MarketPressure = "Bear"
 
-            MarketDataRec = {'price' : event["p"], 'LastQty': event["q"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
+            MarketDataRec = {'price' : LastPx, 'LastQty': event["q"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
@@ -448,14 +450,12 @@ def on_message(ws, message):
         elif eventtype == "BookTicker":
             symbol = event["s"]
             ClosePx = MarketData.hget("L1:" + symbol,'close' )
-            LastPx = MarketData.hget("L1:" + symbol,'price' )
 
             #fall back as aggTrade or close may not be in yet
             if float(ClosePx) == -1:
                 ClosePx = event["a"]
 
-            if float(LastPx) == -1:
-                LastPx = event["a"]
+            LastPx = event["a"]
 
             #Experiment 
             askpx = float(event["a"])

@@ -2,7 +2,7 @@
 script_options:
   # Switch between testnet and mainnet
   # Setting this to False will use REAL funds, use at your own risk
-  TEST_MODE: True
+  TEST_MODE: False
   LOG_FILE: 'trades.txt'
   COIN_FILE: 'coin_selection.csv'
   DEBUG: False
@@ -16,8 +16,8 @@ script_options:
   WEBSOCKET: True
   
   #"coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"
-  #TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade"]
-  TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
+  TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
+  #TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
@@ -69,7 +69,7 @@ trading_options:
   RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -0.9 #-100 #.9
+  STOP_LOSS: -0.6 #-100 #.9
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: 0.2 #1.0 #1.9
@@ -97,7 +97,7 @@ trading_options:
   # when hit SESSION_STOP_LOSS %, sell all coins and stop bot.
   # Note, SESSION_STOP_LOSS needs to be a NEGATIVE number i.e. -2
   SESSION_TPSL_OVERRIDE: True
-  SESSION_TAKE_PROFIT: 1.2
+  SESSION_TAKE_PROFIT: 1
   SESSION_STOP_LOSS: -2
 
   # Trading fee in % per trade.
@@ -129,11 +129,11 @@ trading_options:
     #
     # - jimbot_pause
     # - jimbot-signal_sma_over_trima
-    # - jimbot-signal_framework
+      - jimbot-signal_framework
     # - jimbot-signal_no_calcs
     #  - scalper
       -  Adz_pause
-      -  Adz_signal_framework
+    #  -  Adz_signal_framework
 
 
     

@@ -79,6 +79,7 @@ def DoCycle():
                         #mid = float(data['mid'])  #Bid-Ask/2
                         #orderBookDemand = data['orderBookDemand']  #BidQty > AskQty = Bull else Bear
 
+                        #TradeAgg Required
                         #TrendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
                         TrendingUp = float(data['TrendingUp'])  #count inc if trade px is > last one, resets to 0 once direction changes
                         #TakerCount = float(data['TakerCount'])  #cum vol of Taker trades
@@ -96,8 +97,8 @@ def DoCycle():
                         macd15m = float(TA_15m['macd'])
 
                         # If SMA IS LESS THAN TRIMA not Good
-                        #curve = float(TA_5m['trima'])
-                        #sma = float(TA_5m['sma'])
+                        curve = float(TA_5m['trima'])
+                        sma = float(TA_5m['sma'])
 
                         #If the RSI is over 70, this is generally seen as over-bought and price might move down. 
                         #A reading of 30 indicates a market that is over-sold and price might move up
@@ -150,7 +151,7 @@ def DoCycle():
                             RealTimeCheck = (last_price < buy_below)
                             if RealTimeCheck:
                                 #TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 30 and MarketPressure == 'Bull' and TrendingUp > 3)
-                                TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 25  and TrendingUp > 3)
+                                TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 25  and TrendingUp > 2) and (sma > curve) 
                                 if TimeFrameCheck:
                                     BuyCoin = True
                         

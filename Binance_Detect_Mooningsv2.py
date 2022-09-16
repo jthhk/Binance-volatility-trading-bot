@@ -627,8 +627,8 @@ def sell(symbol,reason):
         TotalFillQty = float(row['volume'])
         FillPx = float(data['price']) if float(data['price']) > 0 else BuyPrice
         TotalFillCost = TotalFillQty * FillPx
-        TxnTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        EntryTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        TxnTime =  datetime.now().strftime("%H:%M:%S.%f")
+        EntryTime =  datetime.now().strftime("%H:%M:%S.%f")
 
         if not settings.TEST_MODE:
             try:
@@ -641,6 +641,7 @@ def sell(symbol,reason):
                 TotalFillCost = TotalFillQty = 0
                 orderID = order_details['orderId']
                 TxnTime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
+                TxnTime = TxnTime.strftime("%H:%M:%S.%f")
                 FillFee = float(0.0)
                 # loop through each 'fill':
                 for fills in order_details['fills']:
@@ -729,8 +730,8 @@ def buy(symbol):
         TotalFillQty = volume
         FillPx = float(data['price'])
         TotalFillCost = TotalFillQty * FillPx
-        txntime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        EntryTime =  datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        txntime =  datetime.now().strftime("%H:%M:%S.%f")
+        EntryTime =  datetime.now().strftime("%H:%M:%S.%f")
 
         if not settings.TEST_MODE:
             # try to create a real order if the test orders did not raise an exception
@@ -744,6 +745,7 @@ def buy(symbol):
                 TotalFillQty = TotalFillCost = 0
                 orderID = order_details['orderId']
                 txntime = datetime.fromtimestamp(order_details['transactTime']/1000, tz=pytz.utc)
+                txntime = txntime.strftime("%H:%M:%S.%f")
                 FillFee = float(0.0)
                 # loop through each 'fill':
                 for fills in order_details['fills']:
@@ -1080,7 +1082,7 @@ if __name__ == '__main__':
                     unrealised_session_profit_incfees_perc = (unrealised_session_profit_incfees_total / settings.total_capital_config) * 100
 
                     #Check History + Session stats
-                    allsession_profits_perc = session_profit_incfees_perc +  ((unrealised_session_profit_incfees_total / settings.total_capital_config) * 100)
+                    allsession_profits_perc = session_profit_incfees_perc +  unrealised_session_profit_incfees_perc
                     market_currprice = float(refpx['price'])
                     market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
 
