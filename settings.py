@@ -21,10 +21,19 @@ def is_fiat():
         return False
         
 def Reinvest_profits(total_capital):
+
+    global total_capital_config,TRADE_TOTAL
+
     TRADE_TOTAL = total_capital
     total_capital_config = TRADE_SLOTS * TRADE_TOTAL
     
 
+def Trailing_StopLoss(sl,tp):
+
+    global SESSION_STOP_LOSS,SESSION_TAKE_PROFIT
+    SESSION_STOP_LOSS = sl
+    SESSION_TAKE_PROFIT = tp
+        
 def init():
 
     global AMERICAN_USER,access_key, secret_key,DATABASE,WEBSOCKET,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE,EX_PAIRS

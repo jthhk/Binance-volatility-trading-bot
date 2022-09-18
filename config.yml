@@ -66,8 +66,8 @@ trading_options:
   # Maximum number of trade 'slots' at any time (your USDT balance must be at least MAX_COINS * QUANTITY)
   MAX_COINS: 5
 
-  # Number of times to check for TP/SL during each TIME_DIFFERENCE (minimum: 1).
-  RECHECK_INTERVAL: 1
+  # Refresh rate of screens
+  RECHECK_INTERVAL: 30
 
   # define in % when to sell a coin that's not making a profit.
   STOP_LOSS: -0.4 #-100 #.9
@@ -91,7 +91,7 @@ trading_options:
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
   TRAILING_STOP_LOSS: -0.02
-  TRAILING_TAKE_PROFIT: 0.5
+  TRAILING_TAKE_PROFIT: 0 #no longer used, replaced by TAKE_PROFIT
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
   # when hit SESSION_TAKE_PROFIT %, sell all coins and stop bot
@@ -130,8 +130,8 @@ trading_options:
     #
       - jimbot_pause
     # - jimbot-signal_sma_over_trima
-    #  - jimbot-signal_framework
-      - jimbot-signal_no_calcs
+      - jimbot-signal_framework
+    #  - jimbot-signal_no_calcs
     #  - scalper
     #  -  Adz_pause
     #  -  Adz_signal_framework

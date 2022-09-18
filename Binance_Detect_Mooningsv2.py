@@ -466,7 +466,6 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.6.6')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -893,6 +892,9 @@ if __name__ == '__main__':
     #loads config.cfg into settings.XXXXX
     settings.init()
 
+    #set report time - every 1 minute
+    lastime = time.time()
+
    # Binance - Authenticate with the client, Ensure API key is good before continuing
     if not settings.TEST_MODE:
 
@@ -1045,7 +1047,7 @@ if __name__ == '__main__':
 
                     #update px for balance_report screen
                     coins_bought.loc[index, ['Lastpx']] = data['price'] 
-                    coins_bought.loc[index, ['Profit']] = ProfitAfterFees_Perc
+                    coins_bought.loc[index, ['Profit']] = round(ProfitAfterFees_Perc,3)
 
                     # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
                     if SellPriceWithFees < SL: 
@@ -1097,9 +1099,10 @@ if __name__ == '__main__':
                         #Session TP and SL Adjustment to lock in profits
                         #SellPriceWithFees (Current px) > TP (bought + take_profit target px)
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT) and settings.USE_TRAILING_STOP_LOSS: 
-                            settings.SESSION_STOP_LOSS = float(settings.SESSION_TAKE_PROFIT) - settings.TRAILING_STOP_LOSS
-                            settings.SESSION_TAKE_PROFIT = float(settings.SESSION_TAKE_PROFIT) + settings.TRAILING_TAKE_PROFIT
-     
+                            sl = float(settings.SESSION_TAKE_PROFIT) - settings.TRAILING_STOP_LOSS
+                            tp = float(settings.SESSION_TAKE_PROFIT) + settings.TRAILING_TAKE_PROFIT
+                            settings.Trailing_StopLoss(sl,tp)
+
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT): 
                             sell_reason = "STP Override:" + str(settings.SESSION_TAKE_PROFIT) + f"% |profit:{allsession_profits_perc}%"
                             is_bot_running = False
@@ -1123,10 +1126,14 @@ if __name__ == '__main__':
 
             #Publish updates to files and screen
             if CoinsUpdates: update_portfolio()
-            balance_report()
-            update_bot_stats()
+            
+            if (time.time() - lastime > settings.RECHECK_INTERVAL) or CoinsUpdates:
+                balance_report()
+                lastime = time.time()
+                update_bot_stats()
+
             #if not (botIscheckingCoins or bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
-            time.sleep(settings.RECHECK_INTERVAL) 
+            #time.sleep(settings.RECHECK_INTERVAL) 
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')
