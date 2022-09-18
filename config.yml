@@ -2,7 +2,7 @@
 script_options:
   # Switch between testnet and mainnet
   # Setting this to False will use REAL funds, use at your own risk
-  TEST_MODE: False
+  TEST_MODE: True
   LOG_FILE: 'trades.txt'
   COIN_FILE: 'coin_selection.csv'
   DEBUG: False
@@ -15,15 +15,16 @@ script_options:
   DATABASE: 0
   WEBSOCKET: True
   
-  #"coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"
-  TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
+  TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"]
+  #TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
   #TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
+  #TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
   BACKTEST_PLAY: False
-  BACKTEST_RECORD: False
-  BACKTEST_FILE: 'backtester/20220108_08_43.txt'
+  BACKTEST_RECORD: True
+  BACKTEST_FILE: 'backtester/202209_18.txt'
   
 # These options apply to the trading methods the script executes
 trading_options:
@@ -69,13 +70,13 @@ trading_options:
   RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: -0.6 #-100 #.9
+  STOP_LOSS: -0.4 #-100 #.9
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: 0.2 #1.0 #1.9
 
   # define cool off period (minutes), so not to buy a losing coin right away.
-  COOLOFF_PERIOD: 30
+  COOLOFF_PERIOD: 60
 
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
@@ -127,12 +128,12 @@ trading_options:
     # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
-    # - jimbot_pause
+      - jimbot_pause
     # - jimbot-signal_sma_over_trima
-      - jimbot-signal_framework
-    # - jimbot-signal_no_calcs
+    #  - jimbot-signal_framework
+      - jimbot-signal_no_calcs
     #  - scalper
-      -  Adz_pause
+    #  -  Adz_pause
     #  -  Adz_signal_framework
 
 

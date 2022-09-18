@@ -358,7 +358,7 @@ def msg_discord(msg):
 def update_bot_stats():
     
     global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total
-    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
+    global trade_wins,trade_losses,trade_miss,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
     global  session_profit_incfees_perc,session_profit_incfees_total
 
     bot_stats = {
@@ -368,6 +368,7 @@ def update_bot_stats():
         'historicProfitIncFees_Total': historic_profit_incfees_total,
         'tradeWins': trade_wins,
         'tradeLosses': trade_losses,
+        'tradeMiss':trade_miss,
         'market_startprice': market_startprice,
         'unrealised_session_profit_incfees_total' : unrealised_session_profit_incfees_total,
         'unrealised_session_profit_incfees_perc' : unrealised_session_profit_incfees_perc,
@@ -408,15 +409,15 @@ def write_log(logline):
 def balance_report(EndOfAlgo=False):
 
     global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total,exposure_calcuated
-    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
+    global trade_wins,trade_losses,trade_miss,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
     global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_paused,feedhandler,ExternalPaused
 
     #Bot Summary 
     #truncating some of the above values to the correct decimal places before printing
     WIN_LOSS_PERCENT = 0
-    if (trade_wins > 0) and (trade_losses > 0):
-        WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses)) * 100, 2)
-    if (trade_wins > 0) and (trade_losses == 0):
+    if (trade_wins > 0) and (trade_losses+trade_miss > 0):
+        WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses+trade_miss)) * 100, 2)
+    if (trade_wins > 0) and (trade_losses+trade_miss == 0):
         WIN_LOSS_PERCENT = 100
 
     try:
@@ -494,7 +495,7 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'ALL TIME DATA   :')
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
-    print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
+    print(f'Completed Trades: {trade_wins+trade_losses+trade_miss} (Wins:{trade_wins} Losses:{trade_losses} Misses:{trade_miss})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
     print(f'Web Socket Status: kline|{kline} | BookTicker|{BookTicker} | aggTrade|{aggTrade}')
@@ -539,13 +540,13 @@ def balance_report(EndOfAlgo=False):
         #write out every time
         if not os.path.exists(settings.HISTORY_LOG_FILE):
             with open(settings.HISTORY_LOG_FILE,'a+') as f:
-                f.write(f'{datetime.now().strftime("%H:%M")}\t{len(coins_bought)}\t{settings.TRADE_SLOTS}\t{str(bot_paused)}\t{session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f}\t{unrealised_session_profit_incfees_perc:.4f}%\t{market_profit:.4f}%\t{trade_wins}\t{trade_losses}\n')                
+                f.write(f'{datetime.now().strftime("%H:%M")}\t{len(coins_bought)}\t{settings.TRADE_SLOTS}\t{str(bot_paused)}\t{session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f}\t{unrealised_session_profit_incfees_perc:.4f}%\t{market_profit:.4f}%\t{trade_wins}\t{trade_losses}\t{trade_miss}\n')                
 
     CurrentMinutes = int(datetime.now().strftime('%M'))
     CurrentSecond = int(datetime.now().strftime('%S'))
     if (CurrentMinutes % 5 == 0) & (CurrentSecond < 2): 
         msg_discord('Pause\tPROFIT\tWins\tHeld\n')
-        msg_discord(f'{str(bot_paused)}\t{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc):.4f}%\t{trade_wins}v{trade_losses}\t{len(coins_bought)}v{settings.TRADE_SLOTS}\n')
+        msg_discord(f'{str(bot_paused)}\t{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc):.4f}%\t{trade_wins}v{trade_losses}\t{trade_miss}\t{len(coins_bought)}v{settings.TRADE_SLOTS}\n')
         msg_discord('---')
 
 ###############################################################
@@ -554,7 +555,7 @@ def balance_report(EndOfAlgo=False):
 def CheckForExistingSession():
 
     global bot_started_datetime,historic_profit_incfees_perc,historic_profit_incfees_total
-    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
+    global trade_wins,trade_losses,trade_miss,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc
     global  session_profit_incfees_perc,session_profit_incfees_total
 
     # Check if files exist and if they do ask what to do 
@@ -602,6 +603,7 @@ def CheckForExistingSession():
             historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
             trade_losses = bot_stats['tradeLosses']
+            trade_miss = bot_stats['tradeMiss']
             market_startprice = bot_stats['market_startprice']
 
             if total_capital != settings.total_capital_config:
@@ -610,7 +612,7 @@ def CheckForExistingSession():
 
 def sell(symbol,reason):
 
-    global coins_sold,coins_bought,bot_manual_pause,trade_wins,trade_losses,historic_profit_incfees_perc
+    global coins_sold,coins_bought,bot_manual_pause,trade_wins,trade_losses,trade_miss,historic_profit_incfees_perc
     global session_profit_incfees_total,session_profit_incfees_perc,historic_profit_incfees_total
 
     if (symbol == "ALL"):
@@ -674,6 +676,9 @@ def sell(symbol,reason):
 
         if (SellPriceWithFees) >= (BuyPriceWithFees):
             trade_wins += 1
+        elif (reason[0] == "1"):
+            #Should of been profit but missed the price, main reason slow price feed/internet
+            trade_miss += 1
         else:
             trade_losses += 1
         
@@ -878,11 +883,11 @@ if __name__ == '__main__':
         sys.exit()
 
     global bot_started_datetime,total_capital,historic_profit_incfees_perc,historic_profit_incfees_total,bot_paused
-    global trade_wins,trade_losses,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc,coins_cooloff
+    global trade_wins,trade_losses,trade_miss,market_startprice,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc,coins_cooloff
     global  session_profit_incfees_perc,session_profit_incfees_total,coins_bought,bot_manual_pause,exposure_calcuated,feedhandler,ExternalPaused
 
     historic_profit_incfees_perc = historic_profit_incfees_total = 0
-    trade_wins=trade_losses=market_startprice=unrealised_session_profit_incfees_total=unrealised_session_profit_incfees_perc = 0
+    trade_wins=trade_losses=trade_miss=market_startprice=unrealised_session_profit_incfees_total=unrealised_session_profit_incfees_perc = 0
     session_profit_incfees_perc=session_profit_incfees_total = exposure_calcuated = 0
 
     #loads config.cfg into settings.XXXXX
@@ -1046,7 +1051,7 @@ if __name__ == '__main__':
                     if SellPriceWithFees < SL: 
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['stop_loss'] > settings.STOP_LOSS:
-                                sell_reason = "Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
+                                sell_reason = "1-Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                                 #Add to the cooloff list so not to buy back at once
                                 transactionInfo = pd.DataFrame({
                                     'symbol': symbol,
@@ -1054,9 +1059,9 @@ if __name__ == '__main__':
                                 },index=[0])
                                 coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)  
                             else:
-                                sell_reason = "TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
+                                sell_reason = "0-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                         else:
-                            sell_reason = "SL: " + str(SL) + " reached"
+                            sell_reason = "0-SL: " + str(SL) + " reached"
         
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
@@ -1064,11 +1069,11 @@ if __name__ == '__main__':
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['take_profit'] > settings.TAKE_PROFIT:
-                                sell_reason = "Adj-TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
+                                sell_reason = "1-Adj-TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                             else:
-                                sell_reason = "TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
+                                sell_reason = "1-TTP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                         else:
-                            sell_reason = "TP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
+                            sell_reason = "1-TP: " + str(TP) + "|" + str(row['take_profit']) + " reached"
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
                         #Add to the cooloff list so not to buy back at once

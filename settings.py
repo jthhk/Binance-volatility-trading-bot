@@ -27,7 +27,7 @@ def Reinvest_profits(total_capital):
 
 def init():
 
-    global AMERICAN_USER,access_key, secret_key,DATABASE,WEBSOCKET,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE
+    global AMERICAN_USER,access_key, secret_key,DATABASE,WEBSOCKET,bot_stats_file_path,coins_bought_file_path,LOG_FILE,HISTORY_LOG_FILE,EX_PAIRS
     global SIGNALLING_MODULES,TEST_MODE,REINVEST_PROFITS,TRADE_TOTAL,TRADE_SLOTS,SESSION_STOP_LOSS,TRADING_FEE,SELL_ON_SIGNAL_ONLY,COIN_FILE
     global USE_TRAILING_STOP_LOSS,SESSION_TPSL_OVERRIDE, DEBUG, MSG_DISCORD,DISCORD_WEBHOOK,PAIR_WITH,EXTSIGNAL_MODULES,coins_sold_file_path
     global TRAILING_TAKE_PROFIT,TRAILING_STOP_LOSS,total_capital_config,SESSION_TAKE_PROFIT,BACKTEST_PLAY,MOVEMENT,RECHECK_INTERVAL,TICKER_ITEMS
@@ -55,6 +55,7 @@ def init():
     DEBUG_SETTING = parsed_config['script_options'].get('DEBUG')
     AMERICAN_USER = parsed_config['script_options'].get('AMERICAN_USER')
     COIN_FILE = parsed_config['script_options'].get('COIN_FILE')
+    
 
     #EnableWeb Sockets
     DATABASE = parsed_config['script_options']['DATABASE']
@@ -72,6 +73,7 @@ def init():
     TRADE_TOTAL = parsed_config['trading_options']['TRADE_TOTAL']
     TRADE_SLOTS = parsed_config['trading_options']['TRADE_SLOTS']
     FIATS = parsed_config['trading_options']['FIATS']
+    EX_PAIRS = parsed_config['trading_options']['EX_PAIRS']
     REF_COIN = parsed_config['trading_options']['REF_COIN']
     
 

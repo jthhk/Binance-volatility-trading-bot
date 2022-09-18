@@ -93,33 +93,35 @@ def InitializeDataFeed():
     tickers = [line.strip() for line in open(settings.TICKERS_LIST)]
     print( str(datetime.now()) + " :Preparing watch list defined in tickers file...")
     for item in tickers:
-        #Create Dataframes with coins
-        coin = item + settings.PAIR_WITH
-        data =  {'symbol': coin}
 
-        sleep_time = 2
-        num_retries = 4
-        
-        for x in range(0, num_retries): 
-            try:
-                info = client.get_symbol_info(coin)
-                step_size = info['filters'][2]['stepSize']
+        if not (item in settings.EX_PAIRS):
+            #Create Dataframes with coins
+            coin = item + settings.PAIR_WITH
+            data =  {'symbol': coin}
 
-                MarketDataRec = {'symbol': coin , 'open': -1, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TrendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',   'TrendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
+            sleep_time = 2
+            num_retries = 4
+            
+            for x in range(0, num_retries): 
+                try:
+                    info = client.get_symbol_info(coin)
+                    step_size = info['filters'][2]['stepSize']
 
-                MarketData.hmset("L1:"+coin, MarketDataRec)
-                MarketData.lpush("L1", "L1:"+coin)
+                    MarketDataRec = {'symbol': coin , 'open': -1, 'high': -1, 'low': -1, 'close': -1, 'potential' : -1, 'interval' : -1,'price' : -1,'LastQty': -1,'BBPx': -1,'BBQty': -1,'BAPx': -1,'BAQty': -1,'updated' : 0, 'step_size' : step_size, 'TrendingDown' : 0, 'spread': 0, 'WeightedAvgPrice': 0, 'mid': 0, 'orderBookDemand': '-',   'TrendingUp': 0 ,  'TakerCount': 0 , 'MakerCount': 0 , 'MarketPressure': '-' }
 
-                get_data_frame(coin)  #Needs to move out
-                coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
-                current_ticker_list.extend(coinlist)
-                CoinsCounter += 1
-            except Exception as str_error:
-                print(f'Warning - {str_error} - sleeping for {sleep_time}' )
-                time.sleep(sleep_time)  # wait before trying to fetch the data again
-                sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
-            else:
-                break
+                    MarketData.hmset("L1:"+coin, MarketDataRec)
+                    MarketData.lpush("L1", "L1:"+coin)
+
+                    get_data_frame(coin)  #Needs to move out
+                    coinlist= [sub.replace('coin', coin.lower()) for sub in SOCKET_LIST]
+                    current_ticker_list.extend(coinlist)
+                    CoinsCounter += 1
+                except Exception as str_error:
+                    print(f'Warning - {str_error} - sleeping for {sleep_time}' )
+                    time.sleep(sleep_time)  # wait before trying to fetch the data again
+                    sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
+                else:
+                    break
 
     print(f'{str(datetime.now())}: Total Coins: {CoinsCounter}')
 
@@ -324,7 +326,7 @@ def on_message(ws, message):
 
             #get price, if not set then set it, if BookTicker not enabled then update
             LastPx = MarketData.hget("L1:" + symbol,'price')
-            if (search("BookTicker", str(settings.TICKER_ITEMS))):
+            if (search("BookTicker", str(settings.TICKER_ITEMS))== None):
                 if is_candle_closed:
                     LastPx = candle["c"]
                 else:
@@ -420,7 +422,7 @@ def on_message(ws, message):
             MakerCount = float(MarketData.hget("L1:" + symbol,'MakerCount'))
             TakerCount = float(MarketData.hget("L1:" + symbol,'TakerCount'))
 
-            if (search("BookTicker", str(settings.TICKER_ITEMS))):
+            if (search("BookTicker", str(settings.TICKER_ITEMS)) == None):
                 LastPx = event["p"]
 
             if event["p"] < LastPx:

@@ -9,6 +9,11 @@ from binance.exceptions import BinanceAPIException, BinanceOrderException
 from binance.helpers import round_step_size
 from datetime import datetime
 
+#dataframes
+import pandas as pd
+
+#global Settings 
+import settings
 
 # Load creds modules
 from helpers.handle_creds import (
@@ -17,6 +22,10 @@ from helpers.handle_creds import (
 
 from colorama import init
 init()
+
+#loads config.cfg into settings.XXXXX
+settings.init()
+
 
 # for colourful logging to the console
 class txcolors:
@@ -67,19 +76,10 @@ def write_log(logline):
     with open(LOG_FILE_PATH,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
 
-def remove_from_portfolio(coins_sold):
-    '''Remove coins sold due to OCO from portfolio'''
-    coins_bought.pop(coins_sold)
-    with open(coins_bought_file_path, 'w') as file:
-        json.dump(coins_bought, file, indent=4)
-    if os.path.exists('signalsell_tickers.txt'):
-        os.remove('signalsell_tickers.txt')
-        for coin in coins_bought:
-            #write_signallsell(coin.removesuffix(PAIR_WITH))
-            write_signallsell(rchop(coin, PAIR_WITH))
     
 with open(coins_bought_file_path, 'r') as f:
-    coins = json.load(f)
+    coins = pd.read_json(settings.coins_bought_file_path, orient ='split', compression = 'infer')
+    coins.head()
     total_profit = 0
     total_price_change = 0
 
@@ -89,22 +89,23 @@ with open(coins_bought_file_path, 'r') as f:
         for coin in prices:
             print(f"{coin['symbol']} - {coin['price']}")
 
-    for coin in list(coins):
-
+    for index, row in coins.iterrows():
+        coin = row['symbol']
         #Get Stock Tick size to round the new prices
         info = client.get_symbol_info(coin)
+
         step_size = float(info['filters'][2]['stepSize'])
         tick_size = float(info['filters'][0]['tickSize'])
-        
+
         #Get current price to check StopPx
         LastTradePrice =float(client.get_symbol_ticker(symbol=coin)['price'])
                
         #calculate the OCO prices
-        BuyPrice = float(coins[coin]['bought_at'])
-        SellPrice = round_step_size(((BuyPrice * (coins[coin]['take_profit']/100)) + BuyPrice),tick_size)
-        StopOrderTrigger = round_step_size(((BuyPrice * (coins[coin]['stop_loss']/100)) + BuyPrice),tick_size)
-        StopOrderPrice = round_step_size(((BuyPrice * (coins[coin]['stop_loss']/100)) + BuyPrice),tick_size)
-        print(f"Sell OCO: {coins[coin]['volume']} {coin} - BP: {BuyPrice} - SP: {SellPrice} - SOT: {StopOrderTrigger} - SOP: {StopOrderPrice} - LP: {LastTradePrice}")
+        BuyPrice = float(row['avgPrice'])
+        SellPrice = round_step_size(((BuyPrice * (row['take_profit']/100)) + BuyPrice),tick_size)
+        StopOrderTrigger = round_step_size(((BuyPrice * (row['stop_loss']/100)) + BuyPrice),tick_size)
+        StopOrderPrice = round_step_size(((BuyPrice * (row['stop_loss']/100)) + BuyPrice),tick_size)
+        print(f"Sell OCO: {row['volume']} {coin} - BP: {BuyPrice} - SP: {SellPrice} - SOT: {StopOrderTrigger} - SOP: {StopOrderPrice} - LP: {LastTradePrice}")
 
         try:
             if StopOrderPrice > LastTradePrice:
@@ -115,14 +116,14 @@ with open(coins_bought_file_path, 'r') as f:
                                 type = 'LIMIT',
                                 price = SellPrice,
                                 timeInForce="GTC",
-                                quantity = coins[coin]['volume']
+                                quantity = row['volume']
                             )
                 SellType = " LONG "
             else:
                 sell_coin = client.create_oco_order(
                     symbol = coin,
                     side = 'SELL',        
-                    quantity = coins[coin]['volume'],        
+                    quantity = row['volume'],        
                     price = SellPrice,
                     stopPrice = StopOrderTrigger,
                     stopLimitPrice = StopOrderPrice,
@@ -134,20 +135,20 @@ with open(coins_bought_file_path, 'r') as f:
             print(e)
      
         else: 
-            remove_from_portfolio(coin)
+            coins_bought = coins_bought.drop(index=index)
 
             #OCO is not executed at this time so using SellPrice for Reference 
             LastPrice = SellPrice
                 
-            profit = (LastPrice - BuyPrice) * coins[coin]['volume']
+            profit = (LastPrice - BuyPrice) * row['volume']
             PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
 
             total_profit += profit
             total_price_change += PriceChange
 
             text_color = txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS
-            console_log_text = f"{text_color}Sell OCO: {coins[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit:.2f} {PriceChange:.2f}%{txcolors.DEFAULT}"
+            console_log_text = f"{text_color}Sell OCO: {row['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit:.2f} {PriceChange:.2f}%{txcolors.DEFAULT}"
             print(console_log_text)
 
             if LOG_TRADES:
-                write_log(f"\tSell\t{coin}\t{coins[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit:.2f}\t{total_price_change:.2f}\tCreate {SellType} Sell")
+                write_log(f"\tSell\t{coin}\t{row['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit:.2f}\t{total_price_change:.2f}\tCreate {SellType} Sell")

@@ -45,10 +45,6 @@ def analyse_btc():
         print(f'{SIGNAL_NAME}: Market not looking good - BitCoin is trending down :' + str(TrendingDown))
         paused = True
 
-    if sma < curve:
-        print(f'{SIGNAL_NAME}: Market not looking good - SMA IS LESS THAN TRIMA :' + str(sma) + '<' + str(curve) )
-        #paused = True
-
     #Trade only monday to Friday
     #if 0 <= now.weekday() <= 4:
     return paused
