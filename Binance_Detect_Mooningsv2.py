@@ -466,7 +466,7 @@ def balance_report(EndOfAlgo=False):
 
     font = f'{txcolors.ENDC}{txcolors.YELLOW}{txcolors.BOLD}{txcolors.UNDERLINE}'
     clear()
-    print(f'v1.6.5')
+    print(f'v1.6.6')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{settings.TRADE_SLOTS} ({float(exposure_calcuated):g}/{float(settings.total_capital_config):g} {settings.PAIR_WITH})')
@@ -546,7 +546,7 @@ def balance_report(EndOfAlgo=False):
     CurrentSecond = int(datetime.now().strftime('%S'))
     if (CurrentMinutes % 5 == 0) & (CurrentSecond < 2): 
         msg_discord('Pause\tPROFIT\tWins\tHeld\n')
-        msg_discord(f'{str(bot_paused)}\t{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc):.4f}%\t{trade_wins}v{trade_losses}\t{trade_miss}\t{len(coins_bought)}v{settings.TRADE_SLOTS}\n')
+        msg_discord(f'{str(bot_paused)}\t{(session_profit_incfees_perc + unrealised_session_profit_incfees_perc):.4f}%\t{trade_wins}v{trade_losses}v{trade_miss}\t{len(coins_bought)}v{settings.TRADE_SLOTS}\n')
         msg_discord('---')
 
 ###############################################################
