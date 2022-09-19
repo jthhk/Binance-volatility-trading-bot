@@ -99,7 +99,7 @@ def InitializeDataFeed():
             coin = item + settings.PAIR_WITH
             data =  {'symbol': coin}
 
-            sleep_time = 2
+            sleep_time = 30
             num_retries = 4
             
             for x in range(0, num_retries): 
@@ -117,7 +117,7 @@ def InitializeDataFeed():
                     current_ticker_list.extend(coinlist)
                     CoinsCounter += 1
                 except Exception as str_error:
-                    print(f'Warning - {str_error} - sleeping for {sleep_time}' )
+                    print(f'Warning - {coin} - get_symbol_info failed sleeping for {sleep_time}' )
                     time.sleep(sleep_time)  # wait before trying to fetch the data again
                     sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
                 else:

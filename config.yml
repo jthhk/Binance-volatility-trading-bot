@@ -15,15 +15,16 @@ script_options:
   DATABASE: 0
   WEBSOCKET: True
   
-  TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"]
+  #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"]
   #TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
   #TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
   #TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
+  TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m"]
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
   BACKTEST_PLAY: False
-  BACKTEST_RECORD: True
+  BACKTEST_RECORD: False
   BACKTEST_FILE: 'backtester/202209_18.txt'
   
 # These options apply to the trading methods the script executes

@@ -1132,9 +1132,6 @@ if __name__ == '__main__':
                 lastime = time.time()
                 update_bot_stats()
 
-            #if not (botIscheckingCoins or bot_paused) and market_startprice >0: print("Scanning no good coins found yet...")
-            #time.sleep(settings.RECHECK_INTERVAL) 
-
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')
         except ConnectionError as ce:
