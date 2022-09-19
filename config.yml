@@ -68,7 +68,7 @@ trading_options:
   MAX_COINS: 5
 
   # Refresh rate of screens
-  RECHECK_INTERVAL: 30
+  RECHECK_INTERVAL: 1
 
   # define in % when to sell a coin that's not making a profit.
   STOP_LOSS: -0.4 #-100 #.9

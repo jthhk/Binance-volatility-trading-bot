@@ -954,6 +954,7 @@ if __name__ == '__main__':
     bot_manual_pause = False
     is_bot_running = True
     market_startprice = 0
+    ReviewCounter = 0
 
     while is_bot_running:
         try:
@@ -1002,6 +1003,7 @@ if __name__ == '__main__':
             unrealised_session_profit_incfees_total = 0 
             unrealised_session_profit_incfees_perc = 0
             botIscheckingCoins = False
+            ReviewCounter = ReviewCounter + 1 
 
             #Check i have a prices, it may take a few seconds at the start 
             refpx = MarketData.hgetall("L1:"+settings.REF_COIN)   
@@ -1129,6 +1131,8 @@ if __name__ == '__main__':
             
             if (time.time() - lastime > settings.RECHECK_INTERVAL) or CoinsUpdates:
                 balance_report()
+                print("Coins reviewed in last cycle:" + str(ReviewCounter))
+                ReviewCounter = 0
                 lastime = time.time()
                 update_bot_stats()
 
