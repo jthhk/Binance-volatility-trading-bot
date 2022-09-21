@@ -151,7 +151,8 @@ def DoCycle():
                             RealTimeCheck = (last_price < buy_below)
                             if RealTimeCheck:
                                 #TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 30 and MarketPressure == 'Bull' and TrendingUp > 3)
-                                TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 25  and TrendingUp > 2) and (sma > curve) 
+                                #TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 25  and TrendingUp > 2) and (sma > curve)
+                                TimeFrameCheck = (macd1m > 0 and macd5m  > 0) and (adx5m > 25) and (sma > curve) 
                                 if TimeFrameCheck:
                                     BuyCoin = True
                         

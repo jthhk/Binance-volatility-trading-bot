@@ -60,7 +60,7 @@ trading_options:
   'XTZDOWN', 'ADADOWN', '1INCHDOWN', 'BTCDOWN', 'SXPDOWN', 'DOTDOWN', 'ETHDOWN', 'BCHDOWN', 'LTCDOWN',
   'YFIDOWN', 'XTZUP', 'DOTUP', 'ADAUP', 'SUPER', 'AAVEUP', 'BTCUP', 'BNBUP', 'SXPUP', 'YFIUP', 'XLMUP',
   'UNIUP', 'FILUP', '1INCHUP', 'LINKUP', 'LTCUP', 'ETHUP', 'SUSHIUP', 'EOSUP', 'XRPUP', 'TRXUP', 'BCHUP',
-  'RENBTC']
+  'RENBTC', "BU"]
 
   # Maximum number of trade 'slots' at any time (your USDT balance must be at least TRADE_SLOTS * TRADE_TOTAL)
   TRADE_SLOTS: 5

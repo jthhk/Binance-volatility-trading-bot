@@ -977,7 +977,7 @@ if __name__ == '__main__':
                              coins_cooloff = coins_cooloff.drop(index=coins_cooloff['symbol'].str.contains(excoin).index.values)
                              CoinCoolingDown = CoinCoolingDown.drop(index=CoinCoolingDown['symbol'].str.contains(excoin).index.values)
                         else:
-                            print("Stock still cooling down")
+                            print(str(excoin) + " Stock still cooling down")
 
                     if len(CoinAlreadyBought.index) == 0 and len(CoinCoolingDown.index) == 0 and (len(coins_bought.index) + 1) <= settings.TRADE_SLOTS:
                         buy(excoin)
