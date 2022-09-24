@@ -264,8 +264,8 @@ def on_error(ws, error):
         print ('On_Error')
         print (os.sys.exc_info()[0:2])
         print ('Error info: %s' %(error))
-        with open('WebSocket.txt','a+') as f:
-            f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} |{os.sys.exc_info()[0:2]}|{error}\n')
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} |{os.sys.exc_info()[0:2]}|{error}\n')
     
     TriggerRestart = True
 
