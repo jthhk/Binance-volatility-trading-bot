@@ -160,9 +160,7 @@ def InitializeDataFeed():
                                             on_message=on_message,
                                             on_error=on_error,
                                             on_close=on_close,
-                                            on_open=on_open,
-                                            on_ping=on_ping,
-                                            on_pong=on_pong)
+                                            on_open=on_open)
         
         web_socket_app.run_forever()
 
@@ -239,22 +237,26 @@ def on_open(ws):
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - OPEN\n')
 
-def on_pong(ws):
+def on_pong(ws,message):
     print("pong connection.")
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - pong\n')
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - {str(message)}\n')
 
-def on_ping(ws):
+def on_ping(ws,message):
     print("ping connection.")
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - ping\n')
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - {str(message)}\n')
+    ws.pong()
 
 def on_close(ws, close_status_code, close_msg):
     if DEBUG:
         print("Closed connection.")
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - CLOSE \n')
-
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - {str(close_status_code)}\n')
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - {str(close_msg)}\n')
 
 def on_error(ws, error):
     #Handle disconnects/timeouts and try to reconnect 
