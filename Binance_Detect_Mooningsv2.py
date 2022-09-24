@@ -489,7 +489,7 @@ def balance_report(EndOfAlgo=False):
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
     print(f'REFERENCE PRICE :')
-    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT}")
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT} {market_currprice} | {market_startprice}")
     print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | 30m={market_macd_30min:.4f} | TrendDown={TrendingDown}")
     print(f'')
     print(f'ALL TIME DATA   :')
@@ -996,7 +996,7 @@ if __name__ == '__main__':
                 else:
                     msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
                 bot_paused = True
-                #msg_discord(msg)
+                #msg_discord(msg)   
 
             #Check every cycle/reset values 
             exposure_calcuated = 0  
@@ -1135,6 +1135,10 @@ if __name__ == '__main__':
                 ReviewCounter = 0
                 lastime = time.time()
                 update_bot_stats()
+
+            #Need to sleep otherwise websocket gets disconnected for some reason  - RECHECK_INTERVAL used for signal files+updates above
+            # Not sure of the best time so will test before firming  
+            time.sleep(0.2)
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')

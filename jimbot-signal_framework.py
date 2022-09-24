@@ -225,7 +225,7 @@ def do_work():
     try:
         while True:
             DoCycle()
-            time.sleep(settings.RECHECK_INTERVAL * 2 ) 
+            time.sleep(settings.RECHECK_INTERVAL ) 
     except KeyboardInterrupt:
         print('Signal file exiting from do_work.')
         sys.exit(0)

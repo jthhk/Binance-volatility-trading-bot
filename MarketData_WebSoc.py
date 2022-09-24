@@ -78,9 +78,9 @@ def InitializeDataFeed():
     # (c) Open Web socket to start collecting market data into the redis database  
     # TO DO: Review: Looking at 3 things - SOCKET_LIST - bookTicker and aggTrade are pretty busy 
     # ######################################    
- 
+    global web_socket_app
+
     SOCKET_URL= "wss://stream.binance.com:9443/ws/"
-    #SOCKET_LIST = ["coin@bookTicker","coin@kline_1m","coin@aggTrade"]
     SOCKET_LIST = settings.TICKER_ITEMS
     current_ticker_list = []
     #-------------------------------------------------------------------------------
@@ -160,10 +160,12 @@ def InitializeDataFeed():
                                             on_message=on_message,
                                             on_error=on_error,
                                             on_close=on_close,
-                                            on_open=on_open)
+                                            on_open=on_open,
+                                            on_ping=on_ping,
+                                            on_pong=on_pong)
         
         web_socket_app.run_forever()
-        web_socket_app.close()
+
     #-------------------------------------------------------------------------------
 
 def is_nan(x):
@@ -237,6 +239,15 @@ def on_open(ws):
     with open('WebSocket.txt','a+') as f:
         f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - OPEN\n')
 
+def on_pong(ws):
+    print("pong connection.")
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - pong\n')
+
+def on_ping(ws):
+    print("ping connection.")
+    with open('WebSocket.txt','a+') as f:
+        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} - ping\n')
 
 def on_close(ws, close_status_code, close_msg):
     if DEBUG:
@@ -276,7 +287,7 @@ def on_error(ws, error):
             #ws.close()
             ws.on_message = None
             ws.on_open = None
-            ws.close = None    
+            ws.close = None 
             print ('deleting ws - ' + str(error))
             del ws
             #Forcebly set ws to None            
@@ -329,10 +340,8 @@ def on_message(ws, message):
             if (search("BookTicker", str(settings.TICKER_ITEMS))== None):
                 if is_candle_closed:
                     LastPx = candle["c"]
-                else:
-                    LastPx = candle["o"]
             potential = -1
-
+    
             if interval == "1s":
                 #1sec/can be used to get prices
                 MarketDataRec = {'symbol': symbol ,'price' : LastPx, 'update': 1}

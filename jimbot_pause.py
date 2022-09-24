@@ -66,4 +66,4 @@ def do_work():
             if os.path.isfile(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}'):
                 os.remove(f'signals/{SIGNAL_NAME}.{SIGNAL_TYPE}')
                 print("Bot resumed by btc_pause")
-        t.sleep(settings.RECHECK_INTERVAL * 2 ) 
+        t.sleep(settings.RECHECK_INTERVAL) 
