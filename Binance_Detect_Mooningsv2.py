@@ -1138,7 +1138,7 @@ if __name__ == '__main__':
 
             #Need to sleep otherwise websocket gets disconnected for some reason  - RECHECK_INTERVAL used for signal files+updates above
             # Not sure of the best time so will test before firming  
-            time.sleep(0.2)
+            time.sleep(0.5)
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')
