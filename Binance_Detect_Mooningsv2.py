@@ -1056,19 +1056,19 @@ if __name__ == '__main__':
                         if settings.USE_TRAILING_STOP_LOSS:
                             if row['stop_loss'] > settings.STOP_LOSS:
                                 sell_reason = "1-Adj-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
-                                #Add to the cooloff list so not to buy back at once
-                                transactionInfo = pd.DataFrame({
-                                    'symbol': symbol,
-                                    'timestamp': datetime.now(),
-                                },index=[0])
-                                coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)  
                             else:
                                 sell_reason = "0-TSL: " + str(SL) + "|" + str(row['stop_loss']) + " reached"
                         else:
                             sell_reason = "0-SL: " + str(SL) + " reached"
-        
+
                         sell(symbol,sell_reason)
                         CoinsUpdates = True
+                        #Add to the cooloff list so not to buy back at once
+                        transactionInfo = pd.DataFrame({
+                            'symbol': symbol,
+                            'timestamp': datetime.now(),
+                        },index=[0])
+                        coins_cooloff = coins_cooloff.append(transactionInfo,ignore_index=True)         
                       
                     if SellPriceWithFees > TP:
                         if settings.USE_TRAILING_STOP_LOSS:
@@ -1138,7 +1138,7 @@ if __name__ == '__main__':
 
             #Need to sleep otherwise websocket gets disconnected for some reason  - RECHECK_INTERVAL used for signal files+updates above
             # Not sure of the best time so will test before firming  
-            time.sleep(0.5)
+            time.sleep(0.2)
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')

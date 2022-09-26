@@ -32,8 +32,9 @@ def coins_update_API():
 	PairLen = -len(settings.PAIR_WITH)
 	exchange_info = client.get_exchange_info()
 	for s in exchange_info['symbols']:
+		print(s['symbol'])
 		if s['symbol'][PairLen:] == settings.PAIR_WITH:
-			print(s['symbol'])
+			#print(s['symbol'])
 			symbol_list.append(s['symbol'])
 	return symbol_list
 

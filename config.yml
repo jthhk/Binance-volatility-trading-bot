@@ -2,7 +2,7 @@
 script_options:
   # Switch between testnet and mainnet
   # Setting this to False will use REAL funds, use at your own risk
-  TEST_MODE: True
+  TEST_MODE: False
   LOG_FILE: 'trades.txt'
   COIN_FILE: 'coin_selection.csv'
   DEBUG: False
@@ -18,8 +18,8 @@ script_options:
   #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"]
   #TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
   #TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
-  #TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
-  TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m"]
+  TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
+  #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m"]
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
