@@ -13,13 +13,20 @@ script_options:
   
   # Database to be used by WebSocket/signal files
   DATABASE: 0
-  WEBSOCKET: True
+  WEBSOCKET: False
   
+  #WebSocket API----
   #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m","coin@kline_1s","coin@aggTrade","coin@kline_1s"]
   #TICKER_ITEMS: ["coin@kline_1m","coin@aggTrade", "coin@bookTicker"]
   #TICKER_ITEMS: ["coin@kline_1s","coin@kline_1m"]
-  TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
+  #TICKER_ITEMS: ["coin@aggTrade","coin@kline_1m"]
   #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m"]
+  
+  #Unicorn API----
+  #TICKER_ITEMS: {'aggTrade', 'trade', 'kline_1m', 'kline_5m', 'kline_15m', 'kline_30m', 'kline_1h', 'kline_2h', 'kline_4h',
+  #               'kline_6h', 'kline_8h', 'kline_12h', 'kline_1d', 'kline_3d', 'kline_1w', 'kline_1M', 'miniTicker',
+  #               'ticker', 'bookTicker', 'depth5', 'depth10', 'depth20', 'depth', 'depth@100ms'}
+  TICKER_ITEMS: {'kline_1m','bookTicker'}
 
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
