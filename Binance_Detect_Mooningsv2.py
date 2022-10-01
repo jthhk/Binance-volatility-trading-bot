@@ -513,7 +513,7 @@ def balance_report(EndOfAlgo=False):
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..auto restarting....')
         External = check_signal_threads()
         print(f'External Signals Status: {External}')
-        if External:
+        if External and feedhandler != -1:
             print(f'Market Data Feedhandler restarting, please do manually via CTRL+C....')
             stop_signal_thread(feedhandler)
             feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)            
@@ -943,7 +943,10 @@ if __name__ == '__main__':
     mymodule = {}
 
     #Start MarketData Thread
-    feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
+    if settings.WEBSOCKET:
+        feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
+    else:
+        feedhandler = -1
 
     # load signalling modules
     signalthreads = start_signal_threads()   
