@@ -535,7 +535,7 @@ if api_ready is not True:
     
 #define redis DataBase connection and flush it
 MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
-if settings.WEBSOCKET: MarketData.flushall()
+MarketData.flushall()
 
 #Collection of dataframes to hold histroic raw data
 list_of_coins = {}
