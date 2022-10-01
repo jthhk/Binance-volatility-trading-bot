@@ -457,6 +457,9 @@ def balance_report(EndOfAlgo=False):
     Eventdata = MarketData.hgetall("UPDATE:BookTicker")   
     if len(Eventdata) >0: BookTicker = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
 
+    Eventdata = MarketData.hgetall("UPDATE:bookTicker")   
+    if len(Eventdata) >0: BookTicker = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
+
 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
