@@ -808,10 +808,11 @@ def menu():
         else:
             print_notimestamp(f'\n[5] Stop Purchases')
         print_notimestamp(f'\n[6] OCO All Coins')
-        if feedhandler.is_alive: 
-            print_notimestamp(f'\n[7] Stop Market Data Socket')
-        else:
-            print_notimestamp(f'\n[7] Start Market Data Socket')   
+        if settings.WEBSOCKET: 
+            if feedhandler.is_alive: 
+                print_notimestamp(f'\n[7] Stop Market Data Socket')
+            else:
+                print_notimestamp(f'\n[7] Start Market Data Socket')   
         print_notimestamp(f'\n[8] Sold Coin Report')            
         print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
         menuoption = input()
