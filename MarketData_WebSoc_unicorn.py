@@ -68,9 +68,9 @@ class txcolors:
     UNDERLINE = '\033[4m'
     ENDC = '\033[0m'
 
-# logging needed otherwise slient fails
+# logging needed otherwise slient fails - INFO/DEBUG/ERROR
 logging.getLogger("unicorn_binance_websocket_api")
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     filename=os.path.basename(__file__) + '.log',
                     format="{asctime} [{levelname:8}] {process} {thread} {module}: {message}",
                     style="{")
