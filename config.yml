@@ -23,9 +23,7 @@ script_options:
   #TICKER_ITEMS: ["coin@bookTicker","coin@kline_1m"]
   
   #Unicorn API----
-  #TICKER_ITEMS: {'aggTrade', 'trade', 'kline_1m', 'kline_5m', 'kline_15m', 'kline_30m', 'kline_1h', 'kline_2h', 'kline_4h',
-  #               'kline_6h', 'kline_8h', 'kline_12h', 'kline_1d', 'kline_3d', 'kline_1w', 'kline_1M', 'miniTicker',
-  #               'ticker', 'bookTicker', 'depth5', 'depth10', 'depth20', 'depth', 'depth@100ms'}
+  #TICKER_ITEMS: {'aggTrade','kline_1m','kline_1s', 'kline_5m', 'bookTicker'}
   TICKER_ITEMS: {'kline_1m','bookTicker'}
 
   # Market data Back Tester

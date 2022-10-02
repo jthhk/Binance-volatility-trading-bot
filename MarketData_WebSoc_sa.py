@@ -162,7 +162,7 @@ def InitializeDataFeed():
                                             on_close=on_close,
                                             on_open=on_open)
         
-        web_socket_app.run_forever()
+        web_socket_app.run_forever(ping_interval=300, ping_timeout=None)
 
     #-------------------------------------------------------------------------------
 
