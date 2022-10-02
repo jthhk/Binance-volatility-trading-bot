@@ -951,6 +951,9 @@ if __name__ == '__main__':
         feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
     else:
         feedhandler = -1
+        print(f'{txcolors.WARNING}WARNING: No Web Socket enabled.{txcolors.DEFAULT}')
+        print(f'{txcolors.WARNING}WARNING: Need to run python MarketData_WebSoc_unicorn.py or MarketData_WebSoc_sa.py{txcolors.DEFAULT}')
+        time.sleep(10)
 
     # load signalling modules
     signalthreads = start_signal_threads()   
