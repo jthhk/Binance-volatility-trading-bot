@@ -180,23 +180,21 @@ def InitializeDataFeed():
 
         # create and start the stream
         for channel in channels:
-            binance_websocket_api_manager.create_stream(channel, markets,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=250)
+            binance_websocket_api_manager.create_stream(channel, markets,stream_buffer_name=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter)
         
         binance_websocket_api_manager.start_monitoring_api()
         
         while True:
             clear()
-            if binance_websocket_api_manager.get_stream_buffer_length() > 0:
-                print ("Processing, Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length()))
-            else:
-                print ("Waiting for data...")
-                
-            latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(mode='LIFO')
-            if latest_stream_data_from_stream_buffer:
-                stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
-                #pprint.pprint(stream_data)
-                process_stream(stream_data)
-           
+            binance_websocket_api_manager.print_summary()
+            for channel in channels:            
+                #print ("Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length(stream_buffer_name=channel)))
+                latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(stream_buffer_name=channel, mode='LIFO')
+                if latest_stream_data_from_stream_buffer:
+                    stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
+                    #pprint.pprint(stream_data)
+                    process_stream(stream_data)
+               
 
             
     #-------------------------------------------------------------------------------
