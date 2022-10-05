@@ -22,6 +22,9 @@ import pprint
 import ccxt
 import logging
 
+# Clear the screen
+from os import system, name
+
 from unicorn_binance_websocket_api.manager import BinanceWebSocketApiManager
 from unicorn_fy.unicorn_fy import UnicornFy
 
@@ -75,6 +78,16 @@ logging.basicConfig(level=logging.INFO,
                     format="{asctime} [{levelname:8}] {process} {thread} {module}: {message}",
                     style="{")
 
+# define our clear function
+def clear():
+  
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
+        
 def InitializeDataFeed():
     #######################################
     # (a) Create redis database
@@ -123,7 +136,7 @@ def InitializeDataFeed():
                     sleep_time *= 2  # Implement your backoff algorithm here i.e. exponential backoff
                 else:
                     break
-
+    clear()
     print(f'{str(datetime.now())}: Total Coins: {CoinsCounter}')
 
     if DEBUG:
@@ -172,7 +185,12 @@ def InitializeDataFeed():
         binance_websocket_api_manager.start_monitoring_api()
         
         while True:
-            print ("Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length()))
+            if binance_websocket_api_manager.get_stream_buffer_length() > 0:
+                print ("Processing, Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length()))
+            else:
+                clear()
+                print ("Waiting for data...")
+                
             latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(mode='LIFO')
             if latest_stream_data_from_stream_buffer:
                 stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
