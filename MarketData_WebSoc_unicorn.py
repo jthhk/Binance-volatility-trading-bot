@@ -185,10 +185,10 @@ def InitializeDataFeed():
         binance_websocket_api_manager.start_monitoring_api()
         
         while True:
+            clear()
             if binance_websocket_api_manager.get_stream_buffer_length() > 0:
                 print ("Processing, Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length()))
             else:
-                clear()
                 print ("Waiting for data...")
                 
             latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(mode='LIFO')
