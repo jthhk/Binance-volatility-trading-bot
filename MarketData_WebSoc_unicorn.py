@@ -470,7 +470,7 @@ def get_data_frame(symbol):
 settings.init()
 
 # Default no debugging
-DEBUG = True
+DEBUG = False
 LATENCY_TEST = False
 
 # Binance - Authenticate with the client, Ensure API key is good before continuing
