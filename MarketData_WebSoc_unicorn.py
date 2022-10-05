@@ -154,10 +154,10 @@ def InitializeDataFeed():
         
     else:    
         print( str(datetime.now()) + " :Connecting to WebSocket ...")
-        if DEBUG: print( str(datetime.now()) + " :Connecting to WebSocket " + SOCKET_LIST + " ...")
+        if DEBUG: print( str(datetime.now()) + " :Connecting to WebSocket " + str(SOCKET_LIST) + " ...")
 
         # create instance of BinanceWebSocketApiManager and provide the function for stream processing
-        binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com")
+        binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com",stream_buffer_maxlen=250)
         # define markets
         #markets = {'bnbbtc', 'ethbtc'}
         markets = current_ticker_list
@@ -167,15 +167,20 @@ def InitializeDataFeed():
 
         # create and start the stream
         for channel in channels:
-            binance_websocket_api_manager.create_stream(channel, markets,ping_interval=300, ping_timeout=None)
-
+            binance_websocket_api_manager.create_stream(channel, markets,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=250)
+        
+        binance_websocket_api_manager.start_monitoring_api()
+        
         while True:
-            oldest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer()
-            if oldest_stream_data_from_stream_buffer:
-                stream_data = UnicornFy.binance_com_websocket(oldest_stream_data_from_stream_buffer)
+            print ("Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length()))
+            latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(mode='LIFO')
+            if latest_stream_data_from_stream_buffer:
+                stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
                 #pprint.pprint(stream_data)
                 process_stream(stream_data)
+           
 
+            
     #-------------------------------------------------------------------------------
 def process_stream(event):
 
@@ -213,10 +218,13 @@ def process_stream(event):
                     LastPx = closePx
             potential = -1
 
+            if DEBUG: print("KLINE:" + str(interval))
             if interval == "1s":
                 #1sec/can be used to get prices
                 MarketDataRec = {'symbol': symbol ,'price' : LastPx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
+                if DEBUG: data = MarketData.hgetall("L1:" + symbol)
+
             elif interval == "1m":
                 #1min/called standard 
                 OneMinDataSet = list_of_coins[symbol + '_1T'] 
@@ -358,6 +366,9 @@ def process_stream(event):
         elif eventtype == "error":
             pprint.pprint("ERR:")
             pprint.pprint(event)
+            
+        if DEBUG: print(data)
+        
 
     except:
         print(event)
@@ -441,7 +452,7 @@ def get_data_frame(symbol):
 settings.init()
 
 # Default no debugging
-DEBUG = False
+DEBUG = True
 LATENCY_TEST = False
 
 # Binance - Authenticate with the client, Ensure API key is good before continuing
