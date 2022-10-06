@@ -180,7 +180,7 @@ def InitializeDataFeed():
 
         # create and start the stream
         for channel in channels:
-            binance_websocket_api_manager.create_stream(channel, markets,stream_buffer_name=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter)
+            binance_websocket_api_manager.create_stream(channel, markets,stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter)
         
         binance_websocket_api_manager.start_monitoring_api()
         
@@ -193,9 +193,7 @@ def InitializeDataFeed():
                 if latest_stream_data_from_stream_buffer:
                     stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
                     #pprint.pprint(stream_data)
-                    process_stream(stream_data)
-               
-
+                    #process_stream(stream_data)
             
     #-------------------------------------------------------------------------------
 def process_stream(event):
