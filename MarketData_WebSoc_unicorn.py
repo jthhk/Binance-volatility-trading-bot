@@ -233,7 +233,7 @@ def process_stream(event):
                 MarketDataRec = {'symbol': symbol ,'price' : closePx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
                 if eventdiff > 1000:
-                    print(f"Event Diff:{eventtype} - {interval} - {symbol} - {is_candle_closed} @ {eventdiff}")
+                    print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
                 if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
             elif interval == "1m":
@@ -310,7 +310,7 @@ def process_stream(event):
                     MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                     if eventdiff > 2000:
-                        print(f"Event Diff:{eventtype} - {interval} - {symbol} - {is_candle_closed} @ {eventdiff}")
+                        print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
                     if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
 
@@ -329,8 +329,7 @@ def process_stream(event):
                 TrendingUp+= 1                
                 TrendingDown = 0
 
-            if (search("bookTicker", str(settings.TICKER_ITEMS)) == None):
-                LastPx = event["price"]
+            LastPx = event["price"]
 
             #markers and takers 
             is_market_maker = event["is_market_maker"]
@@ -346,17 +345,13 @@ def process_stream(event):
 
             MarketDataRec = {'price' : LastPx, 'LastQty': event["quantity"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
+            if eventdiff > 1000:
+                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
             if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
 
         elif eventtype == "bookTicker":
             symbol = event["symbol"]
-            ClosePx = MarketData.hget("L1:" + symbol,'close' )
-
-            #fall back as aggTrade or close may not be in yet
-            if float(ClosePx) == -1:
-                ClosePx = event["best_ask_price"]
-
             LastPx = event["best_ask_price"]
 
             #Experiment 
@@ -372,8 +367,10 @@ def process_stream(event):
             else:
                 orderBookdemand = "Bear"
 
-            MarketDataRec = {'BBPx' : event["best_bid_price"], 'BBQty': event["best_bid_quantity"],'BAPx' : event["best_ask_price"], 'BAQty': event["best_ask_quantity"],'price': LastPx,'close': ClosePx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand, 'update': 1 }
+            MarketDataRec = {'BBPx' : event["best_bid_price"], 'BBQty': event["best_bid_quantity"],'BAPx' : event["best_ask_price"], 'BAQty': event["best_ask_quantity"],'price': LastPx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand, 'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
+            if eventdiff > 1000:
+                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
             if DEBUG: data = MarketData.hgetall("L1:" + symbol)
         elif eventtype == "error":
             pprint.pprint("ERR:")
