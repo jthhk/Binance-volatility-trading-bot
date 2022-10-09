@@ -180,21 +180,21 @@ def InitializeDataFeed():
 
         # create and start the stream
         for channel in channels:
-            binance_websocket_api_manager.create_stream(channel, markets,stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter)
-        
-        binance_websocket_api_manager.start_monitoring_api()
+            binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter,process_stream_data=process_stream)
         
         while True:
-            clear()
-            binance_websocket_api_manager.print_summary()
-            for channel in channels:            
-                #print ("Buffer Length:" + str(binance_websocket_api_manager.get_stream_buffer_length(stream_buffer_name=channel)))
-                latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(stream_buffer_name=channel, mode='LIFO')
-                if latest_stream_data_from_stream_buffer:
-                    stream_data = UnicornFy.binance_com_websocket(latest_stream_data_from_stream_buffer)
-                    #pprint.pprint(stream_data)
-                    #process_stream(stream_data)
-            
+            for channel in channels:
+                i = 0
+                while i < CoinsCounter:
+                    latest_stream_data_from_stream_buffer = binance_websocket_api_manager.pop_stream_data_from_stream_buffer(stream_buffer_name=channel, mode='LIFO') 
+                    if latest_stream_data_from_stream_buffer:
+                        process_stream(latest_stream_data_from_stream_buffer)    
+                        i += 1
+                    else:
+                        i = CoinsCounter
+
+            #time.sleep(0.5)
+
     #-------------------------------------------------------------------------------
 def process_stream(event):
 
@@ -205,14 +205,15 @@ def process_stream(event):
         else:
             eventtime = event['event_time'] 
                 
-        if DEBUG : print(f"Market data Update: {eventtype} @ {eventtime}")
+        if DEBUG: print(f"Market data Update: {eventtype} @ {eventtime}")
+        
+        eventdiff = int('{:<013d}'.format(round(time.time()))) - eventtime
+        #print(f"Event Diff:{eventtype} @ {eventdiff}")
 
         if LATENCY_TEST:
             file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H') + '.txt'
             with open(file_path, "a") as output_file:
-                utc_timestamp = datetime.utcnow()
-                utc_eventtime = datetime.fromtimestamp(eventtime/1000, tz=pytz.utc)
-                output_file.write(str(eventtype) + ';' + str(utc_eventtime) + ';' + str(utc_timestamp) + '\n')
+                output_file.write(str(eventtype) + ';' + str(eventdiff) + '\n')
 
         EventRec = {'updated': eventtime }
         MarketData.hmset("UPDATE:"+eventtype, EventRec)
@@ -224,27 +225,23 @@ def process_stream(event):
             symbol = candle["symbol"]
             interval = candle["interval"]
             closePx = candle["close_price"]
-
-            #get price, if not set then set it, if BookTicker not enabled then update
-            LastPx = MarketData.hget("L1:" + symbol,'price')
-            if (search("bookTicker", str(settings.TICKER_ITEMS))== None):
-                if is_candle_closed:
-                    LastPx = closePx
             potential = -1
 
             if DEBUG: print("KLINE:" + str(interval))
             if interval == "1s":
                 #1sec/can be used to get prices
-                MarketDataRec = {'symbol': symbol ,'price' : LastPx, 'update': 1}
+                MarketDataRec = {'symbol': symbol ,'price' : closePx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
+                if eventdiff > 1000:
+                    print(f"Event Diff:{eventtype} - {interval} - {symbol} - {is_candle_closed} @ {eventdiff}")
                 if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
             elif interval == "1m":
-                #1min/called standard 
-                OneMinDataSet = list_of_coins[symbol + '_1T'] 
-                FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
 
                 if is_candle_closed:
+                    #1min/called standard 
+                    OneMinDataSet = list_of_coins[symbol + '_1T'] 
+                    FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
 
                     #Get Last closed Candle data and prep in dataframe
                     closeminutes = int(datetime.utcfromtimestamp(candle["kline_close_time"]/1000).strftime('%M'))
@@ -301,20 +298,21 @@ def process_stream(event):
                         MarketData.lpush("TA", "TA:"+symbol+calc_item)
                         highpx =  candle["high_price"]
                         lowpx = candle["low_price"]
-                else:
-                    closePx = candle["open_price"]
-                    
-                #session High/low using 1m and 5m combined                 
-                SixMinDataSet = pd.concat([OneMinDataSet,FiveMinDataSet])
-                column = SixMinDataSet["high"]
-                highpx = column.max()
-                column = SixMinDataSet["low"]
-                lowpx = column.min()
-                potential = (float(lowpx) / float(highpx)) * 100
+
+                    #session High/low using 1m and 5m combined                 
+                    SixMinDataSet = pd.concat([OneMinDataSet,FiveMinDataSet])
+                    column = SixMinDataSet["high"]
+                    highpx = column.max()
+                    column = SixMinDataSet["low"]
+                    lowpx = column.min()
+                    potential = (float(lowpx) / float(highpx)) * 100
                 
-                MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'price' : LastPx, 'update': 1}
-                MarketData.hmset("L1:"+symbol, MarketDataRec)
-                if DEBUG: data = MarketData.hgetall("L1:" + symbol)
+                    MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
+                    MarketData.hmset("L1:"+symbol, MarketDataRec)
+                    if eventdiff > 1000:
+                        print(f"Event Diff:{eventtype} - {interval} - {symbol} - {is_candle_closed} @ {eventdiff}")
+                    if DEBUG: data = MarketData.hgetall("L1:" + symbol)
+
 
         elif eventtype == "aggTrade":
             symbol = event["symbol"]
