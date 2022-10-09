@@ -38,3 +38,4 @@ pytz
 websocket_client
 pdoc3
 unicorn_binance_websocket_api
+redis-server
