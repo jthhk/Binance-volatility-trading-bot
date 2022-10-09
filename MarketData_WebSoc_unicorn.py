@@ -180,7 +180,7 @@ def InitializeDataFeed():
 
         # create and start the stream
         for channel in channels:
-            markets = current_ticker_list
+            markets = current_ticker_list.copy()
             if channel == "aggTrade" or channel =="bookTicker":
                 #Remove BTCUSDT and ETHUSDT from markets as they flood the busy streams
                 markets.remove("BTCUSDT")

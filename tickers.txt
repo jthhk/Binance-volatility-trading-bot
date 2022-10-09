@@ -1,5 +1,6 @@
-BTC
+ONT
 ZIL
+BTC
 XRP
 ETH
 ALGO
