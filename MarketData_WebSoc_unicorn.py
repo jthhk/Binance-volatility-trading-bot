@@ -173,13 +173,19 @@ def InitializeDataFeed():
         binance_websocket_api_manager = BinanceWebSocketApiManager(exchange="binance.com",stream_buffer_maxlen=250)
         # define markets
         #markets = {'bnbbtc', 'ethbtc'}
-        markets = current_ticker_list
+
 
         # define stream channels
         channels = SOCKET_LIST
 
         # create and start the stream
         for channel in channels:
+            markets = current_ticker_list
+            if channel == "aggTrade" or channel =="bookTicker":
+                #Remove BTCUSDT and ETHUSDT from markets as they flood the busy streams
+                markets.remove("BTCUSDT")
+                markets.remove("ETHUSDT")
+                                
             binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter,process_stream_data=process_stream)
         
         while True:
@@ -201,7 +207,7 @@ def process_stream(event):
     try:
         eventtype = event['event_type'] 
         if eventtype == "bookTicker":
-            eventtime = round(time.time())
+            eventtime = int('{:<013d}'.format(round(time.time())))
         else:
             eventtime = event['event_time'] 
                 
@@ -233,7 +239,7 @@ def process_stream(event):
                 MarketDataRec = {'symbol': symbol ,'price' : closePx, 'update': 1}
                 MarketData.hmset("L1:"+symbol, MarketDataRec)
                 if eventdiff > 1000:
-                    print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
+                    print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
                 if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
             elif interval == "1m":
@@ -310,7 +316,7 @@ def process_stream(event):
                     MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                     if eventdiff > 2000:
-                        print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
+                        print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
                     if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
 
@@ -346,7 +352,7 @@ def process_stream(event):
             MarketDataRec = {'price' : LastPx, 'LastQty': event["quantity"], 'TrendingDown': TrendingDown, 'TrendingUp': TrendingUp, 'TakerCount': TakerCount, 'MakerCount': MakerCount,'MarketPressure': MarketPressure,'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             if eventdiff > 1000:
-                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
+                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
             if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
 
@@ -370,7 +376,7 @@ def process_stream(event):
             MarketDataRec = {'BBPx' : event["best_bid_price"], 'BBQty': event["best_bid_quantity"],'BAPx' : event["best_ask_price"], 'BAQty': event["best_ask_quantity"],'price': LastPx, 'spread': spread, 'WeightedAvgPrice':WeightedAvgPrice,'mid': mid,'orderBookdemand': orderBookdemand, 'update': 1 }
             MarketData.hmset("L1:"+symbol, MarketDataRec)
             if eventdiff > 1000:
-                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%Y%m%d_%H')} @ {eventdiff}")
+                print(f"Event Diff:{eventtype} - {LastPx} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
             if DEBUG: data = MarketData.hgetall("L1:" + symbol)
         elif eventtype == "error":
             pprint.pprint("ERR:")
