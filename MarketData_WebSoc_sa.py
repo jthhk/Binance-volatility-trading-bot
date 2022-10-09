@@ -319,12 +319,15 @@ def on_message(ws, message):
                 
         if DEBUG : print(f"Market data Update: {eventtype} @ {eventtime}")
 
+        eventdiff = int('{:<013d}'.format(round(time.time()))) - eventtime
+        if eventdiff > 100:
+            eventdiff = eventdiff/60
+            print(f"Event Diff:{eventtype} @ {eventdiff}")
+
         if LATENCY_TEST:
             file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H') + '.txt'
             with open(file_path, "a") as output_file:
-                utc_timestamp = datetime.utcnow()
-                utc_eventtime = datetime.fromtimestamp(eventtime/1000, tz=pytz.utc)
-                output_file.write(str(eventtype) + ';' + str(utc_eventtime) + ';' + str(utc_timestamp) + '\n')
+                output_file.write(str(eventtype) + ';' + str(eventdiff) + '\n')
 
         EventRec = {'updated': eventtime }
         MarketData.hmset("UPDATE:"+eventtype, EventRec)
@@ -337,11 +340,13 @@ def on_message(ws, message):
             interval = candle["i"]
             closePx = candle["c"]
 
-            #get price, if not set then set it, if BookTicker not enabled then update
-            LastPx = MarketData.hget("L1:" + symbol,'price')
-            if (search("BookTicker", str(settings.TICKER_ITEMS))== None):
-                if is_candle_closed:
-                    LastPx = candle["c"]
+
+            #get price, if not set then set it
+            if is_candle_closed:
+                LastPx = closePx
+            else:
+                LastPx = MarketData.hget("L1:" + symbol,'price')
+
             potential = -1
     
             if interval == "1s":
