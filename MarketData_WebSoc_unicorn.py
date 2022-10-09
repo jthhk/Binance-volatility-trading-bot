@@ -188,6 +188,8 @@ def InitializeDataFeed():
                                 
             binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter,process_stream_data=process_stream)
         
+        #binance_websocket_api_manager.start_monitoring_api()
+
         while True:
             for channel in channels:
                 i = 0
@@ -198,8 +200,9 @@ def InitializeDataFeed():
                         i += 1
                     else:
                         i = CoinsCounter
-
-            #time.sleep(0.5)
+            
+            #binance_websocket_api_manager.print_summary()
+            #time.sleep(1)
 
     #-------------------------------------------------------------------------------
 def process_stream(event):
