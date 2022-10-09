@@ -309,7 +309,7 @@ def process_stream(event):
                 
                     MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
-                    if eventdiff > 1000:
+                    if eventdiff > 2000:
                         print(f"Event Diff:{eventtype} - {interval} - {symbol} - {is_candle_closed} @ {eventdiff}")
                     if DEBUG: data = MarketData.hgetall("L1:" + symbol)
 
