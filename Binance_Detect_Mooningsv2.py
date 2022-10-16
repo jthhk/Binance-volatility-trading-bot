@@ -502,16 +502,14 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'Web Socket Status: kline|{kline} | BookTicker|{BookTicker} | aggTrade|{aggTrade}')
     print(f'')
-    print(f'External Signals: {settings.SIGNALLING_MODULES}')
+    print(f'External Signals: {settings.SIGNALLING_MODULES} + {settings.MARKET_DATA_MODULE}')
     current_process = psutil.Process()
     children = current_process.children(recursive=True)
     AuctualSubProcess = 0 
-    if settings.WEBSOCKET:
-        ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
-    else:
-        ExpectedSubProcess =len(settings.SIGNALLING_MODULES) 
+    ExpectedSubProcess =len(settings.SIGNALLING_MODULES) +1 
     for child in children:
         AuctualSubProcess += 1
+
     if (AuctualSubProcess < ExpectedSubProcess) and not EndOfAlgo: 
         print(f'{txcolors.WARNING}Subprocess possibility missing missing..auto restarting....')
         External = check_signal_threads()
@@ -951,8 +949,8 @@ if __name__ == '__main__':
         feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
     else:
         feedhandler = -1
-        print(f'{txcolors.WARNING}WARNING: No Web Socket enabled.{txcolors.DEFAULT}')
-        print(f'{txcolors.WARNING}WARNING: Need to run python MarketData_WebSoc_unicorn.py or MarketData_WebSoc_sa.py{txcolors.DEFAULT}')
+        print(f'{txcolors.WARNING}Start MarketData WebSocket.{txcolors.DEFAULT}')
+        #os.system('python MarketData_WebSoc_unicorn.py')
         time.sleep(10)
 
     # load signalling modules
@@ -1018,7 +1016,9 @@ if __name__ == '__main__':
             #Check i have a prices, it may take a few seconds at the start 
             refpx = MarketData.hgetall("L1:"+settings.REF_COIN)   
             if market_startprice <= 0:
-                if refpx: market_startprice = float(refpx['price'])  
+                if refpx: 
+                    market_startprice = float(refpx['price'])  
+                    feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
 
             for index, row in coins_bought.iterrows():
                 symbol = row['symbol']
@@ -1113,6 +1113,7 @@ if __name__ == '__main__':
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT) and settings.USE_TRAILING_STOP_LOSS: 
                             sl = float(settings.SESSION_TAKE_PROFIT) - settings.TRAILING_STOP_LOSS
                             tp = float(settings.SESSION_TAKE_PROFIT) + settings.TRAILING_TAKE_PROFIT
+                            #TODO - Bug need to check out logic of the 
                             #settings.Trailing_StopLoss(sl,tp)
 
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT): 
@@ -1145,10 +1146,6 @@ if __name__ == '__main__':
                 ReviewCounter = 0
                 lastime = time.time()
                 update_bot_stats()
-
-            #Need to sleep otherwise websocket gets disconnected for some reason  - RECHECK_INTERVAL used for signal files+updates above
-            # Not sure of the best time so will test before firming  
-            time.sleep(0.2)
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')

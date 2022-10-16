@@ -159,7 +159,7 @@ def InitializeDataFeed():
         print( str(datetime.now()) + " :Back tester enabled, Expected time will be " + str(EstTime) + " mins")
         with open(settings.BACKTEST_FILE) as topo_file:
             for line in topo_file:
-                on_message('backtester',line)
+                process_stream(line)
                 time.sleep(SleepValue)
         print( str(datetime.now()) + " :Back tester Replay Complete - Exiting")
         MarketData.flushall()
@@ -191,6 +191,7 @@ def InitializeDataFeed():
             binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=bufferSize)
         
         #binance_websocket_api_manager.start_monitoring_api()
+        lastime = time.time()
 
         while True:
             for channel in channels:
@@ -203,10 +204,10 @@ def InitializeDataFeed():
                     else:
                         i = CoinsCounter
             
-            closeminutes = int(datetime.utcfromtimestamp(round(time.time())/1000).strftime('%M'))
-            if closeminutes % 3 == 0: 
+            if (time.time() - lastime > 250):
                 binance_websocket_api_manager.print_summary()
-            
+                lastime = time.time()
+
     #-------------------------------------------------------------------------------
 def process_stream(event):
 
@@ -319,7 +320,7 @@ def process_stream(event):
                     lowpx = column.min()
                     potential = (float(lowpx) / float(highpx)) * 100
                 
-                    MarketDataRec = {'symbol': symbol ,'price': closePx, 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
+                    MarketDataRec = {'symbol': symbol ,'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                     if eventdiff > 2000:
                         print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
