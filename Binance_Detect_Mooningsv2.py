@@ -1146,6 +1146,8 @@ if __name__ == '__main__':
                 ReviewCounter = 0
                 lastime = time.time()
                 update_bot_stats()
+            
+            time.sleep(0.2)
 
         except ReadTimeout as rt:
             print(f'We got a timeout error from Binance. Re-loop.')
