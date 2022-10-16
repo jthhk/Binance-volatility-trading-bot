@@ -1113,7 +1113,7 @@ if __name__ == '__main__':
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT) and settings.USE_TRAILING_STOP_LOSS: 
                             sl = float(settings.SESSION_TAKE_PROFIT) - settings.TRAILING_STOP_LOSS
                             tp = float(settings.SESSION_TAKE_PROFIT) + settings.TRAILING_TAKE_PROFIT
-                            settings.Trailing_StopLoss(sl,tp)
+                            #settings.Trailing_StopLoss(sl,tp)
 
                         if allsession_profits_perc >= float(settings.SESSION_TAKE_PROFIT): 
                             sell_reason = "STP Override:" + str(settings.SESSION_TAKE_PROFIT) + f"% |profit:{allsession_profits_perc}%"

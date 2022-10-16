@@ -181,12 +181,14 @@ def InitializeDataFeed():
         # create and start the stream
         for channel in channels:
             markets = current_ticker_list.copy()
+            bufferSize = CoinsCounter
             if channel == "aggTrade" or channel =="bookTicker":
                 #Remove BTCUSDT and ETHUSDT from markets as they flood the busy streams
                 markets.remove("BTCUSDT")
                 markets.remove("ETHUSDT")
+                bufferSize = 250
                                 
-            binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=CoinsCounter,process_stream_data=process_stream)
+            binance_websocket_api_manager.create_stream(channel, markets,output="UnicornFy",stream_buffer_name=channel,stream_label=channel,ping_interval=300, ping_timeout=None,stream_buffer_maxlen=bufferSize)
         
         #binance_websocket_api_manager.start_monitoring_api()
 
@@ -201,9 +203,10 @@ def InitializeDataFeed():
                     else:
                         i = CoinsCounter
             
-            #binance_websocket_api_manager.print_summary()
-            #time.sleep(1)
-
+            closeminutes = int(datetime.utcfromtimestamp(round(time.time())/1000).strftime('%M'))
+            if closeminutes % 3 == 0: 
+                binance_websocket_api_manager.print_summary()
+            
     #-------------------------------------------------------------------------------
 def process_stream(event):
 
@@ -316,7 +319,7 @@ def process_stream(event):
                     lowpx = column.min()
                     potential = (float(lowpx) / float(highpx)) * 100
                 
-                    MarketDataRec = {'symbol': symbol , 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
+                    MarketDataRec = {'symbol': symbol ,'price': closePx, 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                     if eventdiff > 2000:
                         print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")
@@ -396,7 +399,7 @@ def process_stream(event):
     if settings.BACKTEST_RECORD:
         file_path = 'backtester/' +  datetime.now().strftime('%Y%m%d_%H_%M') + '.txt'
         with open(file_path, "a") as output_file:
-            output_file.write(message + '\n')
+            output_file.write(event + '\n')
         
 
 
@@ -471,7 +474,7 @@ settings.init()
 
 # Default no debugging
 DEBUG = False
-LATENCY_TEST = False
+LATENCY_TEST = True
 
 # Binance - Authenticate with the client, Ensure API key is good before continuing
 if settings.AMERICAN_USER:

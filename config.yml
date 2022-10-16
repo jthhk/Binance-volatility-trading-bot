@@ -2,7 +2,7 @@
 script_options:
   # Switch between testnet and mainnet
   # Setting this to False will use REAL funds, use at your own risk
-  TEST_MODE: True
+  TEST_MODE: Ture
   LOG_FILE: 'trades.txt'
   COIN_FILE: 'coin_selection.csv'
   DEBUG: False
@@ -24,8 +24,9 @@ script_options:
   
   #Unicorn API----
   #TICKER_ITEMS: {'aggTrade','kline_1m','kline_1s', 'kline_5m', 'bookTicker'}
+  #TICKER_ITEMS: {'kline_1s','kline_1m'}
   TICKER_ITEMS: {'kline_1m','bookTicker'}
-
+  
   # Market data Back Tester
   MARKET_DATA_INTERVAL: 0.5
   BACKTEST_PLAY: False
@@ -79,7 +80,7 @@ trading_options:
   STOP_LOSS: -0.4 #-100 #.9
 
   # define in % when to take profit on a profitable coin.
-  TAKE_PROFIT: 0.22 #1.0 #1.9
+  TAKE_PROFIT: 0.32 #1.0 #1.9
 
   # define cool off period (minutes), so not to buy a losing coin right away.
   COOLOFF_PERIOD: 30
@@ -96,8 +97,8 @@ trading_options:
   # when hit TAKE_PROFIT, move TAKE_PROFIT up by TRAILING_TAKE_PROFIT percentage points
   # NOTE -SELL_ON_SIGNAL_ONLY will override USE_TRAILING_STOP_LOSS
   USE_TRAILING_STOP_LOSS: True
-  TRAILING_STOP_LOSS: -0.02
-  TRAILING_TAKE_PROFIT: 0 #no longer used, replaced by TAKE_PROFIT
+  TRAILING_STOP_LOSS: 0.2
+  TRAILING_TAKE_PROFIT: 0.5 
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
   # when hit SESSION_TAKE_PROFIT %, sell all coins and stop bot
@@ -105,7 +106,7 @@ trading_options:
   # Note, SESSION_STOP_LOSS needs to be a NEGATIVE number i.e. -2
   SESSION_TPSL_OVERRIDE: True
   SESSION_TAKE_PROFIT: 1
-  SESSION_STOP_LOSS: -2
+  SESSION_STOP_LOSS: -1
 
   # Trading fee in % per trade.
   # If using 0.075% (using BNB for fees) you must have BNB in your account to cover trading fees.
