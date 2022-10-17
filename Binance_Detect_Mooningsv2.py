@@ -448,6 +448,7 @@ def balance_report(EndOfAlgo=False):
     BookTicker = -999
     aggTrade = -999
     api = -999
+    APIWeight = -999
 
     Eventdata = MarketData.hgetall("UPDATE:kline")   
     if len(Eventdata) >0: kline = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
@@ -462,8 +463,10 @@ def balance_report(EndOfAlgo=False):
     if len(Eventdata) >0: BookTicker = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
 
     Eventdata = MarketData.hgetall("UPDATE:API")   
-    if len(Eventdata) >0: api = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
-
+    if len(Eventdata) >0: 
+        api = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
+        APIWeight = str(Eventdata['APIWeight'])
+ 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
     if settings.TEST_MODE:
@@ -503,7 +506,8 @@ def balance_report(EndOfAlgo=False):
     print(f'Completed Trades: {trade_wins+trade_losses+trade_miss} (Wins:{trade_wins} Losses:{trade_losses} Misses:{trade_miss})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
-    print(f'Data Status: api|{api}|kline|{kline}|aggTrade|{aggTrade}|BookTicker|{BookTicker}')
+    print(f'Data WebSoc: kline|{kline}|aggTrade|{aggTrade}|BookTicker|{BookTicker}')
+    print(f'Data RestAPI: api|{api}|API Weight|{APIWeight}')
     print(f'')
     print(f'External Signals: {settings.SIGNALLING_MODULES} + {settings.MARKET_DATA_MODULE}')
     current_process = psutil.Process()
@@ -952,8 +956,7 @@ if __name__ == '__main__':
         feedhandler = start_signal_thread(settings.MARKET_DATA_MODULE)
     else:
         feedhandler = -1
-        print(f'{txcolors.WARNING}Start MarketData WebSocket.{txcolors.DEFAULT}')
-        #os.system('python MarketData_WebSoc_unicorn.py')
+        print(f'{txcolors.WARNING}PLEASE Start MarketData WebSocket.{txcolors.DEFAULT}')
         time.sleep(10)
 
     # load signalling modules
@@ -1145,7 +1148,7 @@ if __name__ == '__main__':
             
             if (time.time() - lastime > settings.RECHECK_INTERVAL) or CoinsUpdates:
                 balance_report()
-                print("Coins reviewed in last cycle:" + str(ReviewCounter))
+                print("Coin list reviewed in last cycle:" + str(ReviewCounter))
                 ReviewCounter = 0
                 lastime = time.time()
                 update_bot_stats()

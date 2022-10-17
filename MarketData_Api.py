@@ -59,6 +59,7 @@ def do_work():
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                 lastime = time.time()
                 eventtime = int('{:<013d}'.format(round(time.time())))
-                EventRec = {'updated': eventtime }
+                APIWeight = client.response.headers['x-mbx-used-weight-1m']
+                EventRec = {'updated': eventtime, 'APIWeight': APIWeight}
                 MarketData.hmset("UPDATE:API", EventRec)
-                #time.sleep(10)
+            #time.sleep(10)
