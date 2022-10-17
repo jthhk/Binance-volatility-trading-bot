@@ -57,9 +57,9 @@ def do_work():
                 if data:
                     MarketDataRec = {'symbol': symbol ,'price' : lastpx, 'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
-                lastime = time.time()
-                eventtime = int('{:<013d}'.format(round(time.time())))
-                APIWeight = client.response.headers['x-mbx-used-weight-1m']
-                EventRec = {'updated': eventtime, 'APIWeight': APIWeight}
-                MarketData.hmset("UPDATE:API", EventRec)
+            lastime = time.time()
+            eventtime = int('{:<013d}'.format(round(time.time())))
+            APIWeight = client.response.headers['x-mbx-used-weight-1m']
+            EventRec = {'updated': eventtime, 'APIWeight': APIWeight}
+            MarketData.hmset("UPDATE:API", EventRec)
             #time.sleep(10)
