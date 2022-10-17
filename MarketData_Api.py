@@ -7,52 +7,20 @@ import sys
 #redis
 import redis
 
-
-
 #global Settings 
 import settings
 
-
-# Clear the screen
-from os import system, name
-
-
 #RegEx
 from re import search
-
-# Needed for colorful console output
-from colorama import init
 
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 
-# used for dates
-from datetime import datetime
-
 # Load creds modules
 from helpers.handle_creds import (
     test_api_key
 )
-
-        
-def InitializeDataFeed():
-
-    lastime = time.time()
-
-    while True:
-        if (time.time() - lastime > 10):
-            prices = client.get_all_tickers()
-            for coin in prices:
-                symbol = coin['symbol']
-                lastpx = coin['price']
-                data = MarketData.hgetall("L1:"+symbol)
-                if data:
-                    MarketDataRec = {'symbol': symbol ,'price' : lastpx, 'update': 1}
-                    MarketData.hmset("L1:"+symbol, MarketDataRec)
-                lastime = time.time()
-
-#-------------------------------------------------------------------------------
         
 #loads config.cfg into settings.XXXXX
 settings.init()
@@ -75,17 +43,22 @@ MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decod
 
 def do_work():
     
-    try:
-        #Start Websocket
-        print("Market data api feedhandler starting - do_work.")
-        InitializeDataFeed()
-    except KeyboardInterrupt:
-        print('Market data api file exiting from do_work.')
-        sys.exit(0)
+    #Start Websocket
+    print("Market data api feedhandler starting - do_work.")
+    lastime = time.time()
 
-"""
-if __name__ == '__main__':
-
-    #Start MarketData Thread
-    do_work()
-"""
+    while True:
+        if (time.time() - lastime > 1):
+            prices = client.get_all_tickers()
+            for coin in prices:
+                symbol = coin['symbol']
+                lastpx = coin['price']
+                data = MarketData.hgetall("L1:"+symbol)
+                if data:
+                    MarketDataRec = {'symbol': symbol ,'price' : lastpx, 'update': 1}
+                    MarketData.hmset("L1:"+symbol, MarketDataRec)
+                lastime = time.time()
+                eventtime = int('{:<013d}'.format(round(time.time())))
+                EventRec = {'updated': eventtime }
+                MarketData.hmset("UPDATE:API", EventRec)
+                #time.sleep(10)

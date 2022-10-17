@@ -447,6 +447,7 @@ def balance_report(EndOfAlgo=False):
     kline = -999
     BookTicker = -999
     aggTrade = -999
+    api = -999
 
     Eventdata = MarketData.hgetall("UPDATE:kline")   
     if len(Eventdata) >0: kline = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
@@ -460,6 +461,8 @@ def balance_report(EndOfAlgo=False):
     Eventdata = MarketData.hgetall("UPDATE:bookTicker")   
     if len(Eventdata) >0: BookTicker = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
 
+    Eventdata = MarketData.hgetall("UPDATE:API")   
+    if len(Eventdata) >0: api = datetime.fromtimestamp(int(Eventdata['updated'])/1000, tz=pytz.utc)
 
     mode = "Live (REAL MONEY)"
     discord_mode = "Live"
@@ -500,7 +503,7 @@ def balance_report(EndOfAlgo=False):
     print(f'Completed Trades: {trade_wins+trade_losses+trade_miss} (Wins:{trade_wins} Losses:{trade_losses} Misses:{trade_miss})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
-    print(f'Web Socket Status: kline|{kline} | BookTicker|{BookTicker} | aggTrade|{aggTrade}')
+    print(f'Data Status: api|{api}|kline|{kline}|aggTrade|{aggTrade}|BookTicker|{BookTicker}')
     print(f'')
     print(f'External Signals: {settings.SIGNALLING_MODULES} + {settings.MARKET_DATA_MODULE}')
     current_process = psutil.Process()
