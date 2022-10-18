@@ -31,20 +31,6 @@ def analyse_btc():
         curve = -999
         sma = -999
 
-    if histbtc < 0:
-        print(f'{SIGNAL_NAME}: Market not looking good - BitCoin 1m MACD is -ve =' + str(histbtc))
-        paused = True
-
-    data = MarketData.hgetall('L1:BTCUSDT')
-    if len(data) > 0:
-        TrendingDown = float(data['TrendingDown'])  #count inc if trade px is < last one, resets to 0 once direction changes
-    else:
-        TrendingDown = 0
-
-    if TrendingDown > 5:
-        print(f'{SIGNAL_NAME}: Market not looking good - BitCoin is trending down :' + str(TrendingDown))
-        paused = True
-
     if sma < curve:
         print(f'{SIGNAL_NAME}: Market not looking good - SMA IS LESS THAN TRIMA :' + str(sma) + '<' + str(curve) )
         paused = True

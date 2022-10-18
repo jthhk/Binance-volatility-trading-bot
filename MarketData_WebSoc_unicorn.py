@@ -256,6 +256,11 @@ def process_stream(event):
                     OneMinDataSet = list_of_coins[symbol + '_1T'] 
                     FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
 
+                    #get the last close px for trending calc
+                    lastpx = MarketData.hget("L1:" + symbol,'price')
+                    TrendingDown = float(MarketData.hget("L1:" + symbol,'TrendingDown'))
+                    TrendingUp = float(MarketData.hget("L1:" + symbol,'TrendingUp'))
+
                     #Get Last closed Candle data and prep in dataframe
                     closeminutes = int(datetime.utcfromtimestamp(candle["kline_close_time"]/1000).strftime('%M'))
                     closedate = datetime.fromtimestamp(candle["kline_close_time"]/1000, tz=pytz.utc)
@@ -319,8 +324,16 @@ def process_stream(event):
                     column = SixMinDataSet["low"]
                     lowpx = column.min()
                     potential = (float(lowpx) / float(highpx)) * 100
+
+                    #look for an uptick in price vs new candle
+                    if float(candle["close_price"]) < float(lastpx) :
+                        TrendingDown+= 1
+                        TrendingUp= 0
+                    else:
+                        TrendingUp+= 1                
+                        TrendingDown = 0
                 
-                    MarketDataRec = {'symbol': symbol ,'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
+                    MarketDataRec = {'symbol': symbol , 'TrendingDown': TrendingDown,'TrendingUp': TrendingUp, 'open': candle["open_price"], 'high': highpx, 'low': lowpx, 'close': closePx, 'potential' : potential, 'interval' : interval,'update': 1}
                     MarketData.hmset("L1:"+symbol, MarketDataRec)
                     if eventdiff > 2000:
                         print(f"Event Diff:{eventtype} - {interval} - {symbol} - { datetime.now().strftime('%HH:%MM:%SS')} @ {eventdiff}")

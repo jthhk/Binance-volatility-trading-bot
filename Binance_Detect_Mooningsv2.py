@@ -425,6 +425,7 @@ def balance_report(EndOfAlgo=False):
         market_currprice = float(data['price'])  
         market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
         TrendingDown = float(data['TrendingDown'])
+        TrendingUp = float(data['TrendingUp'])
 
         Ref_TA_5m = MarketData.hgetall('TA:'+settings.REF_COIN+'5T')
         market_macd_5min = float(Ref_TA_5m['macd'])  
@@ -499,7 +500,7 @@ def balance_report(EndOfAlgo=False):
     print(f'')
     print(f'REFERENCE PRICE :')
     print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% ( {settings.REF_COIN} Since STARTED){txcolors.DEFAULT} {market_currprice} | {market_startprice}")
-    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | 30m={market_macd_30min:.4f} | TrendDown={TrendingDown}")
+    print(f"Trending        : 1m={market_macd_1min:.4f} | 5m={market_macd_5min:.4f} | 30m={market_macd_30min:.4f} | TrendDown={TrendingDown}| TrendUp={TrendingUp}")
     print(f'')
     print(f'ALL TIME DATA   :')
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {settings.PAIR_WITH}{txcolors.DEFAULT}')

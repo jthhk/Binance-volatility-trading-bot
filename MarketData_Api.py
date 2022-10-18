@@ -38,28 +38,33 @@ if api_ready is not True:
     exit(f'{msg}')
         
     
-#define redis DataBase connection and flush it
-MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
 
 def do_work():
     
+    #define redis DataBase connection and flush it
+    MarketData = redis.Redis(host='localhost', port=6379, db=settings.DATABASE,decode_responses=True)
+
     #Start Websocket
     print("Market data api feedhandler starting - do_work.")
     lastime = time.time()
 
-    while True:
-        if (time.time() - lastime > 1):
-            prices = client.get_all_tickers()
-            for coin in prices:
-                symbol = coin['symbol']
-                lastpx = coin['price']
-                data = MarketData.hgetall("L1:"+symbol)
-                if data:
-                    MarketDataRec = {'symbol': symbol ,'price' : lastpx, 'update': 1}
-                    MarketData.hmset("L1:"+symbol, MarketDataRec)
-            lastime = time.time()
-            eventtime = int('{:<013d}'.format(round(time.time())))
-            APIWeight = client.response.headers['x-mbx-used-weight-1m']
-            EventRec = {'updated': eventtime, 'APIWeight': APIWeight}
-            MarketData.hmset("UPDATE:API", EventRec)
-            #time.sleep(10)
+    try:
+        while True:
+            if (time.time() - lastime > 0.2):
+                prices = client.get_all_tickers()
+                for coin in prices:
+                    symbol = coin['symbol']
+                    lastpx = coin['price']
+                    data = MarketData.hgetall("L1:"+symbol)
+                    if data:
+                        MarketDataRec = {'symbol': symbol ,'price' : lastpx, 'update': 1}
+                        MarketData.hmset("L1:"+symbol, MarketDataRec)
+                lastime = time.time()
+                eventtime = int('{:<013d}'.format(round(time.time())))
+                APIWeight = client.response.headers['x-mbx-used-weight-1m']
+                EventRec = {'updated': eventtime, 'APIWeight': APIWeight}
+                MarketData.hmset("UPDATE:API", EventRec)
+                time.sleep(settings.RECHECK_INTERVAL )
+    except KeyboardInterrupt:
+        print('API file exiting from do_work.')
+        sys.exit(0)
