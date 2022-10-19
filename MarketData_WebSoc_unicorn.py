@@ -404,8 +404,8 @@ def process_stream(event):
             
         if DEBUG: print(data)
         
-
-    except:
+    except Exception as e:
+        print(str(e))
         print(event)
 
 

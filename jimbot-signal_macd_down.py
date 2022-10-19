@@ -141,7 +141,7 @@ def DoCycle():
                         TimeFrameCheck = False 
 
                         #Main Strategy checker
-                        TimeFrameCheck = (macd1m < 0 and macd5m  > 0) and TrendingUp > 1
+                        TimeFrameCheck = (macd1m < 0 and macd5m  > 0) and TrendingUp >= 1
                         if TimeFrameCheck:
                             BuyCoin = True
                         #-----------------------------------------------------------------

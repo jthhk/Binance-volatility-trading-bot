@@ -444,7 +444,8 @@ def balance_report(EndOfAlgo=False):
         market_currprice = -999
         market_profit = -999
         TrendingDown = -999
-
+        TrendingUp = -999
+       
     kline = -999
     BookTicker = -999
     aggTrade = -999
@@ -1060,6 +1061,7 @@ if __name__ == '__main__':
                             coins_bought.loc[index, ['take_profit']] = row['take_profit']
                             coins_bought.loc[index, ['stop_loss']] = row['stop_loss'] 
                             TP = float(BuyPriceWithFees) + ((float(BuyPriceWithFees) * (row['take_profit'])/100))
+                            SL = float(BuyPriceWithFees) + ((float(BuyPriceWithFees) * (row['stop_loss'])/100))
                    
                     #exposure_calcuated for balance_report screen
                     exposure_calcuated += round((SellPriceWithFees *row['volume']) ,0)
