@@ -205,7 +205,7 @@ def InitializeDataFeed():
                         i = CoinsCounter
             
             if (time.time() - lastime > 250):
-                binance_websocket_api_manager.print_summary()
+                #binance_websocket_api_manager.print_summary()
                 lastime = time.time()
 
     #-------------------------------------------------------------------------------
@@ -238,6 +238,7 @@ def process_stream(event):
             symbol = candle["symbol"]
             interval = candle["interval"]
             closePx = candle["close_price"]
+            closeminutes = int(datetime.utcfromtimestamp(candle["kline_close_time"]/1000).strftime('%M'))
             potential = -1
 
             if DEBUG: print("KLINE:" + str(interval))
@@ -251,7 +252,11 @@ def process_stream(event):
 
             elif interval == "1m":
 
-                if is_candle_closed:
+                #Reset the datasets every 1hr to ensure they are OK as possible slippage as time goes on
+                if closeminutes == 0: 
+                    get_data_frame(symbol,True)
+
+                elif is_candle_closed:
                     #1min/called standard 
                     OneMinDataSet = list_of_coins[symbol + '_1T'] 
                     FiveMinDataSet = list_of_coins[symbol + '_' + '5T']
@@ -260,9 +265,8 @@ def process_stream(event):
                     lastpx = MarketData.hget("L1:" + symbol,'price')
                     TrendingDown = float(MarketData.hget("L1:" + symbol,'TrendingDown'))
                     TrendingUp = float(MarketData.hget("L1:" + symbol,'TrendingUp'))
-
+                    
                     #Get Last closed Candle data and prep in dataframe
-                    closeminutes = int(datetime.utcfromtimestamp(candle["kline_close_time"]/1000).strftime('%M'))
                     closedate = datetime.fromtimestamp(candle["kline_close_time"]/1000, tz=pytz.utc)
                     closedate = closedate.replace(tzinfo=None)
                     LastCandle = {closedate : {'open': float(candle["open_price"]), 'high':  float(candle["high_price"]), 'low':  float(candle["low_price"]),'close':  float(candle["close_price"]), 'volume' :  float(candle["base_volume"])}}
@@ -420,7 +424,7 @@ def process_stream(event):
 def is_nan(x):
     return (x == -1 )
 
-def get_data_frame(symbol):
+def get_data_frame(symbol,Reload=False):
     # On start up get the history from fetch_ohlcv cia cctx 
     # - 5m used to calc the 5min (5T) and 15min (15T)
     # - 15m used to calc the 1min (1T)
@@ -434,6 +438,11 @@ def get_data_frame(symbol):
     df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     df['time'] = pd.to_datetime(df['time'],unit='ms')
     df.set_index('time', inplace=True)
+    if Reload:
+        print("--OLD 5--")
+        print(list_of_coins[symbol + '_' + '5T'])
+        print("--NEW 5--")
+        print(df)
     list_of_coins[symbol + '_' + '5T'] = df
         
     calc_timeframes = ['5T', '15T','30T']
@@ -458,10 +467,15 @@ def get_data_frame(symbol):
 
     #get the 1m
     timeframes = '1m'
-    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=36)
+    data  = exchange.fetch_ohlcv(symbol, timeframe=timeframes, limit=120)
     df  = pd.DataFrame(data , columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     df['time'] = pd.to_datetime(df['time'],unit='ms')
     df.set_index('time', inplace=True)
+    if Reload:
+        print("--OLD 1--")
+        print(list_of_coins[symbol + '_' + '1T'])
+        print("--NEW 1--")
+        print(df)
     list_of_coins[symbol + '_' + '1T'] = df
 
     rsi = df.ta.rsi()
@@ -524,7 +538,6 @@ def do_work():
         print(f'{txcolors.WARNING}Market data feedhandler exiting - do_work.')
 
 
-# Remove "*3 above 
 if __name__ == '__main__':
 #Uncomment for Testing Standalone only
     #loads config.cfg into settings.XXXXX
@@ -540,4 +553,3 @@ if __name__ == '__main__':
 
     #Start MarketData Thread
     do_work()
-# Remove "*3 below 

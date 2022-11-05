@@ -21,7 +21,7 @@ from binance.exceptions import BinanceAPIException
 from helpers.handle_creds import (
     test_api_key
 )
-        
+
 #loads config.cfg into settings.XXXXX
 settings.init()
 
